@@ -8,8 +8,8 @@ import Foundation
 //     yyyy-MM date, so a header row is optional in every file. The defaults below copy what the
 //     Shortcut files have today: workouts.csv has `start,type,minutes`, the others have none.
 //   - Dates are read as the first 10 characters (16 for workout starts, 19 for sleep times).
-//   - vo2max.csv and weight.csv hold one row per reading; build.py sorts by (date, value), so
-//     when a day has two readings the higher one is treated as the latest.
+//   - vo2max.csv and weight.csv: build.py sorts by (date, value), so with two readings on a day
+//     it would treat the higher one as the latest. The app writes only the latest of each day.
 //   - sleep_raw.txt is `start,end,stage` with seconds. Stages containing core/deep/rem/asleep
 //     count as sleep; "Awake" and "In bed" don't.
 //   - Habit counts match on a substring of the lower-cased type: strength, rowing, yoga.
@@ -104,17 +104,25 @@ public struct ExportWriter: Sendable {
         return Self.assemble(header: formats.exerciseHeader, lines: lines)
     }
 
-    public func vo2max(_ readings: [DatedValue]) -> String {
-        let lines = readings.sorted { $0.date < $1.date }.map {
-            "\(stamp($0.date, formats.vo2Date)),\(Self.fixed($0.value, formats.vo2Decimals))"
+    /// One row per day: the latest reading of that day. build.py sorts rows by (date, value), so
+    /// with two readings on a day it would show the higher one as the latest.
+    func latestPerDay(_ readings: [DatedValue], pattern: String) -> [(day: String, value: Double)] {
+        var byDay: [String: DatedValue] = [:]
+        for r in readings {
+            let day = stamp(r.date, pattern)
+            if let kept = byDay[day], kept.date > r.date { continue }
+            byDay[day] = r
         }
+        return byDay.map { (day: $0.key, value: $0.value.value) }.sorted { $0.day < $1.day }
+    }
+
+    public func vo2max(_ readings: [DatedValue]) -> String {
+        let lines = latestPerDay(readings, pattern: formats.vo2Date).map { "\($0.day),\(Self.fixed($0.value, formats.vo2Decimals))" }
         return Self.assemble(header: formats.vo2Header, lines: lines)
     }
 
     public func weight(_ readings: [DatedValue]) -> String {
-        let lines = readings.sorted { $0.date < $1.date }.map {
-            "\(stamp($0.date, formats.weightDate)),\(Self.fixed($0.value, formats.weightDecimals))"
-        }
+        let lines = latestPerDay(readings, pattern: formats.weightDate).map { "\($0.day),\(Self.fixed($0.value, formats.weightDecimals))" }
         return Self.assemble(header: formats.weightHeader, lines: lines)
     }
 

@@ -23,6 +23,9 @@ final class ReportStore {
     /// Set by AppModel: whether trial mode is on, and what to do when plan days change.
     var trialMode: () -> Bool = { true }
     var onPlanChange: () -> Void = {}
+    /// Called once for each issue newer than any seen before (not on the very first load).
+    var onNewIssue: (ReportIssue) -> Void = { _ in }
+    private static let lastIssueKey = "lastIssueSeen"
 
     init(folder: HealthGlanceFolder) { self.folder = folder }
 
@@ -65,6 +68,11 @@ final class ReportStore {
             let all = loaded.cache.values.map(\.issue)
             let byDate = Dictionary(all.map { ($0.date, $0) }) { a, _ in a }
             if byDate != issues { issues = byDate; archive = ReportArchive(issues: Array(byDate.values)) }
+            if let newest = latest {
+                let seen = UserDefaults.standard.string(forKey: Self.lastIssueKey)
+                if newest.date != seen { UserDefaults.standard.set(newest.date, forKey: Self.lastIssueKey) }
+                if let seen, newest.date > seen { onNewIssue(newest) }
+            }
             if loaded.votes != votes { votes = loaded.votes }
             if loaded.saved != saved { saved = loaded.saved }
             if loaded.plan != plan { plan = loaded.plan; onPlanChange() }
@@ -124,14 +132,14 @@ final class ReportStore {
         let key = CardVote.key(issueDate: issue.date, cardID: card.id)
         let previous = votes[key]
         let next = previous?.vote == value ? 0 : value
-        votes[key] = CardVote(vote: next, issueDate: issue.date, card: card, at: Self.now())
+        votes[key] = CardVote(vote: next, issueDate: issue.date, card: card, section: issue.section(of: card), at: Self.now())
         do { try folder.write(AppFiles.json(votes), to: AppFiles.feedback) } catch { votes[key] = previous }
     }
 
     func keep(question: String, answer: String, card: ReportCard?, issue: ReportIssue) -> Bool {
         let entry = SavedAnswer(question: question, answer: answer, date: issue.date, card: card?.id ?? "plan-checkin",
                                 pillar: card?.pillar ?? "Body", cardTitle: card.map { RichText.plain($0.title) } ?? "Your food plan",
-                                at: Self.now())
+                                section: card.map { issue.section(of: $0) } ?? SectionDefinition.healthKey, at: Self.now())
         saved.append(entry)
         do { try folder.write(AppFiles.json(saved), to: AppFiles.saved); return true } catch { saved.removeLast(); return false }
     }

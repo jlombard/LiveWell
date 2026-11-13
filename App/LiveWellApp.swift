@@ -31,6 +31,9 @@ struct LiveWellApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    #if DEBUG && targetEnvironment(simulator)
+    @State private var demoReview = UserDefaults.standard.bool(forKey: "demoReview")
+    #endif
 
     var body: some View {
         @Bindable var model = model
@@ -44,6 +47,12 @@ struct RootView: View {
         }
         .toolbarBackground(Theme.bg, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
+        #if DEBUG && targetEnvironment(simulator)
+        // Simulator only: `-demoReview 1` opens the plan review without closing a week first.
+        .fullScreenCover(isPresented: $demoReview) {
+            ZStack { Theme.bg.ignoresSafeArea(); PlanReviewView { demoReview = false } }.preferredColorScheme(.dark)
+        }
+        #endif
     }
 }
 

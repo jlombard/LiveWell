@@ -151,7 +151,8 @@ struct GoDeeperSheet: View {
         turns.append(GoDeeper.Turn(fromReader: true, text: question))
         messages.append(Message(role: .claude, text: ""))
         let answerID = messages[messages.count - 1].id
-        let system = GoDeeper.system(profile: target.issue.profile, cardText: cardText)
+        let section = target.card.map { target.issue.section(of: $0) } ?? SectionDefinition.healthKey
+        let system = GoDeeper.system(profile: target.issue.profile, cardText: cardText, section: model.config.sectionName(section))
         let history = turns, chosen = model.settings.chatModel
 
         asking = Task { @MainActor in

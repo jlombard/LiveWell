@@ -169,10 +169,13 @@ public struct CardVote: Codable, Equatable, Sendable {
     public var label: String
     public var title: String
     public var at: String
+    /// The card's section (nil in votes saved before sections existed: Health).
+    public var section: String?
 
-    public init(vote: Int, issueDate: String, card: ReportCard, at: String) {
+    public init(vote: Int, issueDate: String, card: ReportCard, section: String? = nil, at: String) {
         self.vote = vote; date = issueDate; self.card = card.id; kind = card.kind
         pillar = card.pillar ?? ""; label = card.label; title = RichText.plain(card.title); self.at = at
+        self.section = section
     }
 
     public static func key(issueDate: String, cardID: String) -> String { issueDate + "_" + cardID }
@@ -187,12 +190,14 @@ public struct SavedAnswer: Codable, Equatable, Identifiable, Sendable {
     public var pillar: String
     public var cardTitle: String
     public var at: String
+    public var section: String?
 
     public var id: String { at + question }
 
-    public init(question: String, answer: String, date: String, card: String, pillar: String, cardTitle: String, at: String) {
+    public init(question: String, answer: String, date: String, card: String, pillar: String, cardTitle: String,
+                section: String? = nil, at: String) {
         self.question = question; self.answer = answer; self.date = date; self.card = card
-        self.pillar = pillar; self.cardTitle = cardTitle; self.at = at
+        self.pillar = pillar; self.cardTitle = cardTitle; self.section = section; self.at = at
     }
 }
 
@@ -235,9 +240,10 @@ public enum GoDeeper {
     public static let planStarters = ["What keeps tripping me up, and one fix?", "Ideas for an on-plan weekend",
                                       "How does the food plan move my waist?"]
 
-    public static func system(profile: String, cardText: String) -> String {
+    /// - section: the display name of the card's section ("Health", "Money").
+    public static func system(profile: String, cardText: String, section: String = "Health") -> String {
         """
-        You are the voice of "The Surf Report", Joe's personal health feed. He tapped "Go deeper" on one card and wants to learn more.
+        You are the voice of "The Surf Report", Joe's personal \(section.lowercased()) feed. He tapped "Go deeper" on one card and wants to learn more.
         \(profile)
 
         Style: warm, plain-spoken, like a knowledgeable coach. Lead with how it affects his body and goals, not with what he did. Keep answers short (under 180 words) unless he asks for more. No markdown headers; short paragraphs or a few dashes are fine.

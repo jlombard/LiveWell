@@ -47,6 +47,8 @@ public struct HabitStatus: Codable, Equatable, Identifiable, Sendable {
     public var value: Double?      // nil = not measured
     public var goal: Double
     public var provenance: Provenance
+    /// SF Symbol from the habit's definition.
+    public var symbol: String?
     public var id: String { key }
 
     public var met: Bool { (value ?? 0) >= goal && value != nil }
@@ -70,10 +72,27 @@ public enum HabitCounter {
     /// - exerciseMinutes: per-day totals; nil when Health gave nothing (shows "not measured").
     /// - mac: data.json, the fallback for plan days when the app has no check-ins of its own.
     /// - planDays: on-plan days from the app's food check-in (nil = nothing logged in the app).
+    /// - sessionDays: days (yyyy-MM-dd) with a session from another source, by source name
+    ///   (`HabitDefinition.alsoCounts`); each day in the window counts once.
     public static func statuses(config: SurfConfig, workouts: [WorkoutRow], exerciseMinutes: [DatedValue]?,
-                                mac: DashboardData?, planDays: Int? = nil, now: Date, calendar: Calendar) -> [HabitStatus] {
+                                mac: DashboardData?, planDays: Int? = nil, sessionDays: [String: Set<String>] = [:],
+                                now: Date, calendar: Calendar) -> [HabitStatus] {
         let start = windowStart(now: now, days: config.habitWindowDays, calendar: calendar)
         return config.habits.map { habit in
+            var status = count(habit, config: config, workouts: workouts, exerciseMinutes: exerciseMinutes, mac: mac,
+                               planDays: planDays, start: start, now: now)
+            if case .workouts = habit.source, let source = habit.extraSource, let days = sessionDays[source], let value = status.value {
+                let first = GoalMath.dayString(start, calendar: calendar), last = GoalMath.dayString(now, calendar: calendar)
+                status.value = value + Double(days.filter { $0 >= first && $0 <= last }.count)
+            }
+            status.symbol = habit.symbolName
+            return status
+        }
+    }
+
+    private static func count(_ habit: HabitDefinition, config: SurfConfig, workouts: [WorkoutRow], exerciseMinutes: [DatedValue]?,
+                              mac: DashboardData?, planDays: Int?, start: Date, now: Date) -> HabitStatus {
+        do {
             switch habit.source {
             case .workouts(let types):
                 let n = workouts.filter {
@@ -104,45 +123,84 @@ public enum HabitCounter {
     }
 }
 
-/// What the lock-screen widget needs, written by the app into the shared App Group container.
+/// What the widgets need, written by the app into the shared App Group container.
 public struct WidgetSnapshot: Codable, Equatable, Sendable {
     public struct Icon: Codable, Equatable, Sendable {
         public var key: String
         public var name: String
         public var met: Bool
-        public init(key: String, name: String, met: Bool) { self.key = key; self.name = name; self.met = met }
+        /// SF Symbol (nil in snapshots written by older builds).
+        public var symbol: String?
+        /// "1/2", "265" (nil = not measured).
+        public var count: String?
+        public init(key: String, name: String, met: Bool, symbol: String? = nil, count: String? = nil) {
+            self.key = key; self.name = name; self.met = met; self.symbol = symbol; self.count = count
+        }
+    }
+    /// One progress bar for the medium widget: where the pillar stands between start and goal.
+    public struct Bar: Codable, Equatable, Sendable {
+        public var key: String
+        public var label: String
+        public var progress: Double      // 0...1
+        public var reached: Bool
+        public init(key: String, label: String, progress: Double, reached: Bool) {
+            self.key = key; self.label = label; self.progress = progress; self.reached = reached
+        }
     }
     public var line: String
     public var icons: [Icon]
     public var activeMinutes: Double?
     public var activeGoal: Double
     public var updated: Date
+    /// Days to the goal date, and the goal's title ("Surf at 60").
+    public var daysLeft: Int?
+    public var title: String?
+    public var bars: [Bar]?
 
     public static let fileName = "widget.json"
     public static let placeholder = WidgetSnapshot(
         line: "Surf at 60",
-        icons: SurfConfig.default.habits.map { Icon(key: $0.key, name: $0.name, met: false) },
+        icons: SurfConfig.default.habits.map { Icon(key: $0.key, name: $0.name, met: false, symbol: $0.symbolName) },
         activeMinutes: nil, activeGoal: 250, updated: Date(timeIntervalSince1970: 0))
 
-    public init(line: String, icons: [Icon], activeMinutes: Double?, activeGoal: Double, updated: Date) {
+    public init(line: String, icons: [Icon], activeMinutes: Double?, activeGoal: Double, updated: Date,
+                daysLeft: Int? = nil, title: String? = nil, bars: [Bar]? = nil) {
         self.line = line; self.icons = icons; self.activeMinutes = activeMinutes
         self.activeGoal = activeGoal; self.updated = updated
+        self.daysLeft = daysLeft; self.title = title; self.bars = bars
+    }
+
+    /// True when the two would draw the same widget (the write time aside).
+    public func sameContent(as other: WidgetSnapshot) -> Bool {
+        var a = self, b = other
+        a.updated = Date(timeIntervalSince1970: 0); b.updated = a.updated
+        return a == b
     }
 
     /// Line 1 is the Mac's Today line when data.json is from today; otherwise the nudge for the
     /// habit furthest behind, so the widget is never stale advice.
     public static func make(config: SurfConfig, statuses: [HabitStatus], mac: DashboardData?,
-                            todayString: String, now: Date) -> WidgetSnapshot {
+                            todayString: String, now: Date, calendar: Calendar = .current) -> WidgetSnapshot {
         var line = config.goal.title
         if let mac, mac.date == todayString, let today = mac.today, !today.isEmpty {
             line = shorten(today)
         } else if let behind = HabitCounter.furthestBehind(statuses), let habit = config.habit(behind.key) {
             line = habit.nudge
         }
-        let active = statuses.first { $0.key == "active" }
-        return WidgetSnapshot(line: line,
-                              icons: statuses.map { Icon(key: $0.key, name: $0.name, met: $0.met) },
-                              activeMinutes: active?.value, activeGoal: active?.goal ?? 250, updated: now)
+        // The circular widget shows the habit that counts Exercise minutes, whatever it is called.
+        let minutesKey = config.habits.first { $0.source == .exerciseMinutes }?.key
+        let active = statuses.first { $0.key == minutesKey }
+        let icons = statuses.map { s -> Icon in
+            let goal = CheckinsFile.number(s.goal)
+            let count = s.value.map { s.goal > 20 ? CheckinsFile.number($0) : "\(CheckinsFile.number($0))/\(goal)" }
+            return Icon(key: s.key, name: s.name, met: s.met, symbol: s.symbol, count: count)
+        }
+        let bars = mac?.pillars.compactMap { p in
+            p.progress.map { Bar(key: p.key, label: p.label, progress: min(1, max(0, $0)), reached: p.reached ?? false) }
+        }
+        return WidgetSnapshot(line: line, icons: icons, activeMinutes: active?.value, activeGoal: active?.goal ?? 250, updated: now,
+                              daysLeft: config.dashboardSection?.goal == nil ? nil : GoalMath.daysLeft(goal: config.goal, now: now, calendar: calendar),
+                              title: config.goal.title, bars: bars)
     }
 
     /// "Row today." -> "Row today"; long lines keep their first sentence.

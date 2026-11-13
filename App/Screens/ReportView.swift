@@ -9,6 +9,8 @@ struct ReportView: View {
     /// A past issue being read (nil = today's).
     @State private var backIssue: String?
     @State private var deeper: DeeperTarget?
+    /// Show one section's cards only (nil = all). Offered once issues carry more than one section.
+    @State private var sectionFilter: String?
 
     enum Section: String, CaseIterable { case today = "Today", archive = "Past issues", recipes = "Recipe box" }
 
@@ -30,7 +32,9 @@ struct ReportView: View {
                     Group {
                         switch section {
                         case .today: today
-                        case .archive: ArchiveList(archive: store.archive, latest: store.latest?.date) { open($0) }
+                        case .archive:
+                            sectionChips(store.archive.sections)
+                            ArchiveList(archive: store.archive, latest: store.latest?.date, section: sectionFilter) { open($0) }
                         case .recipes: RecipeBox(archive: store.archive) { open($0) }
                         }
                     }
@@ -101,11 +105,13 @@ struct ReportView: View {
                 if let intro = issue.intro, !intro.isEmpty {
                     Rich(intro, font: Theme.serif(22, relativeTo: .title3, italic: true), color: Theme.secondary)
                 }
-                if !isBack {
+                sectionChips(issue.sections)
+                // The food check-in belongs to the dashboard section.
+                if !isBack, sectionFilter == nil || sectionFilter == model.config.dashboardSection?.key {
                     PlanCheckinCard(issue: issue) { deeper = DeeperTarget(issue: issue, card: nil) }
                 }
-                ForEach(issue.cards) { card in
-                    CardView(card: card, issue: issue,
+                ForEach(issue.cards.filter { sectionFilter == nil || $0.kind == "end" || issue.section(of: $0) == sectionFilter }) { card in
+                    CardView(card: card, issue: issue, showSection: issue.sections.count > 1,
                              onDeeper: { deeper = DeeperTarget(issue: issue, card: card) },
                              onSection: { section = $0 })
                         .id(card.id)
@@ -116,6 +122,37 @@ struct ReportView: View {
         } else {
             empty("No issues found yet. They arrive in newsletter/issues in the Health Glance folder after the Mac's morning run. Pull down to check again.")
         }
+    }
+
+    /// "All · Health · Money", shown only when there is more than one section to choose from.
+    @ViewBuilder private func sectionChips(_ sections: [String]) -> some View {
+        if sections.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    sectionChip("All", key: nil)
+                    ForEach(sections, id: \.self) { sectionChip(model.config.sectionName($0), key: $0) }
+                }
+            }
+            .padding(.bottom, 4)
+        } else {
+            Color.clear.frame(height: 0).onAppear { sectionFilter = nil }
+        }
+    }
+
+    private func sectionChip(_ title: String, key: String?) -> some View {
+        let selected = sectionFilter == key
+        return Button { sectionFilter = key } label: {
+            HStack(spacing: 6) {
+                if let key, let icon = model.config.section(key)?.icon { Image(systemName: icon).font(.caption) }
+                Text(title).font(.subheadline.weight(selected ? .semibold : .regular))
+            }
+            .padding(.horizontal, 14).frame(minHeight: 36)
+            .background(selected ? Theme.accent.opacity(0.16) : Theme.cardDeep, in: Capsule())
+            .overlay(Capsule().stroke(selected ? Theme.accent : Theme.line, lineWidth: 1))
+            .foregroundStyle(Theme.text)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func empty(_ text: String) -> some View {
@@ -136,16 +173,22 @@ struct CardView: View {
     @Environment(AppModel.self) private var model
     let card: ReportCard
     let issue: ReportIssue
+    /// Name the card's section in its kicker (when the issue mixes sections).
+    var showSection = false
     var onDeeper: () -> Void
     var onSection: (ReportView.Section) -> Void
     @State private var picked: Int?
 
-    private var palette: CardPalette { card.win ? .win : .normal }
+    private var sectionKey: String { issue.section(of: card) }
+    private var palette: CardPalette {
+        card.win ? .win : CardPalette.normal.accented(model.config.section(sectionKey)?.accent)
+    }
     private var isEnd: Bool { card.kind == "end" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Kicker(label: card.label, pillar: card.pillar, tag: card.tag, palette: palette)
+            Kicker(label: showSection && !isEnd ? "\(model.config.sectionName(sectionKey)) · \(card.label)" : card.label,
+                   pillar: card.pillar, tag: card.tag, palette: palette)
             if isEnd, let days = model.daysLeft {
                 Text("\(days)").font(Theme.serif(84, relativeTo: .largeTitle)).foregroundStyle(palette.text)
             }
@@ -481,14 +524,20 @@ struct PlanCheckinCard: View {
 struct ArchiveList: View {
     let archive: ReportArchive
     let latest: String?
+    /// Only issues with a card in this section (nil = all).
+    var section: String?
     var open: (String) -> Void
+
+    private var entries: [ReportArchive.Entry] {
+        archive.issues.filter { section == nil || $0.sections.contains(section!) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            let n = archive.issues.count
+            let n = entries.count
             Text(n == 0 ? "No issues yet." : "\(n) \(n == 1 ? "issue" : "issues") so far. Tap one to read it again.")
                 .font(.subheadline).foregroundStyle(Theme.secondary).padding(.bottom, 8)
-            ForEach(archive.issues) { entry in
+            ForEach(entries) { entry in
                 Button { open(entry.date) } label: {
                     VStack(alignment: .leading, spacing: 4) {
                         Text((entry.issue.map { "No. \($0) · " } ?? "") + DayMath.dateline(entry.date))

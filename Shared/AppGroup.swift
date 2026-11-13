@@ -22,8 +22,7 @@ enum AppGroup {
     @discardableResult
     static func writeSnapshot(_ snapshot: WidgetSnapshot) -> Bool {
         guard let url = container?.appendingPathComponent(WidgetSnapshot.fileName) else { return false }
-        if let old = readSnapshot(), old.line == snapshot.line, old.icons == snapshot.icons,
-           old.activeMinutes == snapshot.activeMinutes, old.activeGoal == snapshot.activeGoal { return false }
+        if let old = readSnapshot(), old.sameContent(as: snapshot) { return false }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(snapshot) else { return false }
@@ -34,9 +33,11 @@ enum AppGroup {
 enum DeepLink {
     static let today = URL(string: "livewell://today")!
     static let checkin = URL(string: "livewell://checkin")!
+    static let report = URL(string: "livewell://report")!
 }
 
-/// SF Symbols for the five habits, shared by the app and the widget.
+/// SF Symbols for habits whose definition names none (configs and snapshots saved by older builds).
+/// New code reads the symbol from the habit's definition: `HabitStatus.symbol`, `WidgetSnapshot.Icon.symbol`.
 enum HabitSymbol {
     static func name(_ key: String) -> String {
         switch key {

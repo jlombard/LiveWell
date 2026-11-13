@@ -13,9 +13,23 @@ struct CardPalette: Equatable {
 
     static let normal = CardPalette(text: Theme.text, secondary: Theme.secondary, background: Theme.card,
                                     line: Theme.line, accent: Theme.accent, css: "#F4F3EF")
+    /// The same palette with a section's own accent ("#RRGGBB"); an unreadable value keeps the default.
+    func accented(_ hex: String?) -> CardPalette {
+        guard let hex, let color = Color(hex: hex), self == .normal else { return self }
+        var copy = self; copy.accent = color; return copy
+    }
+
     static let win = CardPalette(text: Theme.bg, secondary: Color(red: 0.32, green: 0.33, blue: 0.34), background: Theme.text,
                                  line: Color(red: 0.78, green: 0.78, blue: 0.75), accent: Color(red: 0.10, green: 0.42, blue: 0.72),
                                  css: "#0A0B0D")
+}
+
+extension Color {
+    init?(hex: String) {
+        let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "# "))
+        guard digits.count == 6, let n = UInt32(digits, radix: 16) else { return nil }
+        self.init(red: Double((n >> 16) & 0xFF) / 255, green: Double((n >> 8) & 0xFF) / 255, blue: Double(n & 0xFF) / 255)
+    }
 }
 
 extension AttributedString {

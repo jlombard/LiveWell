@@ -27,6 +27,8 @@ struct AppSettings: Codable, Equatable {
     var formats = ExportFormats()
     /// The Claude model the Go deeper chat uses.
     var chatModel = ClaudeClient.defaultModel
+    /// Tell me when a new Surf Report issue arrives.
+    var issueAlerts = true
 
     init() {}
 
@@ -42,6 +44,7 @@ struct AppSettings: Codable, Equatable {
         sleepDays = try c.decodeIfPresent(Int.self, forKey: .sleepDays) ?? d.sleepDays
         formats = (try? c.decodeIfPresent(ExportFormats.self, forKey: .formats)) ?? d.formats
         chatModel = try c.decodeIfPresent(String.self, forKey: .chatModel) ?? d.chatModel
+        issueAlerts = try c.decodeIfPresent(Bool.self, forKey: .issueAlerts) ?? d.issueAlerts
     }
 
     var healthFolder: String { trialMode ? "health_app" : "health" }
@@ -71,11 +74,21 @@ final class AppModel {
             guard settings != oldValue else { return }
             persist(settings, "settings.json")
             scheduleReminder()
-            if settings.trialMode != oldValue.trialMode { Task { await report.reload() } }
+            if settings.trialMode != oldValue.trialMode {
+                if !settings.trialMode { finishCutover() }
+                Task { await report.reload(); await sync() }
+            }
         }
     }
 
     private(set) var dashboard: DashboardData?
+    /// Pillar values over time, by pillar key then day, recorded from data.json as it arrives.
+    /// The plan review reads 4-week trends from it.
+    var pillarHistory: [String: [String: Double]] = [:]
+    /// Days with a session from a source other than Health, by source name ("fitclub": ARX main sets).
+    private(set) var sessionDays: [String: Set<String>] = [:]
+    /// What happened at cutover (shown in Settings).
+    var cutoverNote: String?
     private(set) var statuses: [HabitStatus] = []
     private(set) var checkins = CheckinsFile()
     private(set) var fileStatus: [String: FileStatus] = [:]
@@ -89,6 +102,8 @@ final class AppModel {
     var lastLogged: LoggedNote?
 
     private var exerciseMinutes: [DatedValue]?
+    /// Per-day Exercise minutes (35 days), for the plan review's two weeks.
+    var exerciseMinutesForReview: [DatedValue]? { exerciseMinutes }
     private var syncAgain = false
 
     var context: ModelContext { container.mainContext }
@@ -102,6 +117,7 @@ final class AppModel {
         settings = Self.load("settings.json") ?? AppSettings()
         fileStatus = Self.load("filestatus.json") ?? [:]
         exerciseMinutes = Self.load("exercise.json")
+        pillarHistory = Self.load("pillars.json") ?? [:]
         #if DEBUG && targetEnvironment(simulator)
         // Simulator only: `-demoFolder <path>` links a folder on the Mac without the file picker.
         if let path = UserDefaults.standard.string(forKey: "demoFolder") { try? folder.link(URL(fileURLWithPath: path)) }
@@ -112,6 +128,7 @@ final class AppModel {
         folder.onReportChange = { [weak self] in Task { await self?.report.reload() } }
         report.trialMode = { [weak self] in self?.settings.trialMode ?? true }
         report.onPlanChange = { [weak self] in self?.recompute() }
+        report.onNewIssue = { [weak self] in self?.announce($0) }
         Task { await report.reload() }
         loadDashboard()
         loadCheckins()
@@ -235,11 +252,27 @@ final class AppModel {
         persist(fileStatus, "filestatus.json")
     }
 
+    /// FitClub days from the Mac's ARX download, so Lift counts them as the Mac dashboard does.
+    @discardableResult
+    private func loadSessionDays() -> Bool {
+        struct ARXSet: Decodable { var date: String?; var kind: String? }
+        guard folder.isLinked, let data = try? folder.read("fitclub/sets.json"),
+              let sets = try? JSONDecoder().decode([ARXSet].self, from: data) else { return false }
+        let days = Set(sets.filter { $0.kind == "Main set" }.compactMap { $0.date.map { String($0.prefix(10)) } })
+        if sessionDays["fitclub"] == days { return false }
+        sessionDays["fitclub"] = days
+        return true
+    }
+
     func loadDashboard() {
+        let sessionsChanged = loadSessionDays()
         guard folder.isLinked, let data = try? folder.read("data.json"),
-              let decoded = try? DashboardData.decode(data) else { return }
+              let decoded = try? DashboardData.decode(data) else { if sessionsChanged { recompute() }; return }
         if decoded != dashboard {
             dashboard = decoded
+            recordPillars(decoded)
+            recompute()
+        } else if sessionsChanged {
             recompute()
         }
     }
@@ -248,9 +281,9 @@ final class AppModel {
         let now = Date()
         statuses = HabitCounter.statuses(config: config, workouts: workoutRows(), exerciseMinutes: exerciseMinutes,
                                          mac: dashboard, planDays: report.planCount(today: GoalMath.dayString(now, calendar: calendar)),
-                                         now: now, calendar: calendar)
+                                         sessionDays: sessionDays, now: now, calendar: calendar)
         let snapshot = WidgetSnapshot.make(config: config, statuses: statuses, mac: dashboard,
-                                           todayString: GoalMath.dayString(now, calendar: calendar), now: now)
+                                           todayString: GoalMath.dayString(now, calendar: calendar), now: now, calendar: calendar)
         if AppGroup.writeSnapshot(snapshot) { WidgetCenter.shared.reloadAllTimelines() }
     }
 
@@ -268,7 +301,7 @@ final class AppModel {
         let today = GoalMath.dayString(Date(), calendar: calendar)
         if let dashboard, dashboard.date == today, let line = dashboard.today, !line.isEmpty { return line }
         if let behind = HabitCounter.furthestBehind(statuses), let habit = config.habit(behind.key) { return habit.nudge + "." }
-        return statuses.isEmpty ? config.goal.title : "All five met."
+        return statuses.isEmpty ? config.goal.title : "All habits met."
     }
 
     var daysLeft: Int? { GoalMath.daysLeft(goal: config.goal, now: Date(), calendar: calendar) }
@@ -356,6 +389,7 @@ final class AppModel {
     func scheduleReminder() {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["checkin"])
+        if settings.issueAlerts, !settings.reminderOn { center.requestAuthorization(options: [.alert, .sound]) { _, _ in } }
         guard settings.reminderOn else { return }
         #if DEBUG && targetEnvironment(simulator)
         if UserDefaults.standard.string(forKey: "demoFolder") != nil { return }   // no permission prompt over demo screens
@@ -384,20 +418,20 @@ final class AppModel {
 
     // MARK: small JSON files in Application Support
 
-    private static func supportURL(_ name: String) -> URL {
+    static func supportURL(_ name: String) -> URL {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent(name)
     }
 
-    private static func load<T: Decodable>(_ name: String) -> T? {
+    static func load<T: Decodable>(_ name: String) -> T? {
         guard let data = try? Data(contentsOf: supportURL(name)) else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(T.self, from: data)
     }
 
-    private func persist<T: Encodable>(_ value: T, _ name: String) {
+    func persist<T: Encodable>(_ value: T, _ name: String) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

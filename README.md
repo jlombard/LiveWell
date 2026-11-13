@@ -1,4 +1,4 @@
-# LiveWell — iOS app, Phases 1 and 2
+# LiveWell — iOS app
 
 The app behind the Surf at 60 goal. "Surf at 60" is the goal configured in it; LiveWell is the app.
 
@@ -8,13 +8,16 @@ the lock-screen widget and the Today dashboard. Built to the UX concepts canvas 
 value has a provenance; no double counting).
 
 Phase 2 adds The Surf Report: a native reader for the daily issue, past issues and the recipe
-box, the food check-in, votes on cards, and the Go deeper chat.
+box, the food check-in, votes on cards, and the Go deeper chat. The follow-ups (Nov 13, 2026)
+add the cutover tools, sections, home-screen widgets, the biweekly plan review, the app icon
+and a new-issue alert.
 
-**Status.** Phase 1 runs on the phone. Phase 2 builds with no warnings, the core library
-passes its 29 tests (including decoding all 20 real issues), and every Report screen and
-figure type has been checked in the simulator against a copy of the real folder. Not yet
-exercised by hand: saving a food check-in, voting, and a live Go deeper answer (no API key on
-the Mac). See "Trying Phase 2" below.
+**Status.** Phases 1 and 2 run on the phone. The follow-ups build with no warnings and the core
+library passes its 39 tests. Checked in the simulator against a copy of the real folder: the
+plan review screen, the section filter, the icon render and the widget layouts (rendered
+off-device). Not yet seen on a device: the new widgets on a home screen and in StandBy, the
+tinted and dark icon, accepting a plan change, and the new-issue alert. See "Trying the
+follow-ups" below.
 
 ## What's here
 
@@ -104,6 +107,60 @@ After cutover it stops writing `health/plan_days.csv` and the app owns it.
 4. Add an API key in Settings, tap Go deeper on a card, ask a starter question, and keep the
    answer (`app/saved.json`).
 
+## Follow-ups (Nov 13, 2026)
+
+**Cutover**
+- `python3 engine/compare_trial.py` (in the Health Glance folder) builds from `health/` and
+  `health_app/` and prints habits and pillars side by side; `--days 7` covers the last week.
+  `build.py` gained `--health <folder>` for it (old copy in `engine/old/build_2026-11-13.py`).
+- Every session counts: no merging and no minimum length. Duplicates go by HealthKit UUID.
+- `vo2max.csv` and `weight.csv` hold only the latest reading of each day.
+- Turning Trial mode off in Settings moves `health/workouts_log.csv` to `health/old/`. Turning
+  off the three Watch automations and the Export Shortcut is still yours to do that day.
+- Lift counts FitClub days from `fitclub/sets.json` as well as Health strength workouts, the
+  way `build.py` does, so the tile and the review agree with the Mac.
+
+**Sections.** `config.json` is section-first: each section has a key, name, icon and accent,
+and optionally a goal, habits, measurements and a dashboard. Health is the only one today; an
+older `config.json` loads as the Health section with every edit kept. Issues and cards carry a
+`section` (missing means `health`); the Report shows section chips once an issue or the archive
+has more than one, and votes, kept answers and the Go deeper prompt carry it. Today reads the
+dashboard section and habit icons come from the config, so nothing there is fitness-specific.
+
+**Widgets.** Small (also StandBy): days left, the Today line, five icons lit or dim. Medium:
+the Today line, icons with counts, five progress lines with the current dot. Both mark their
+accent parts for iOS 18's tinted mode. The lock-screen widgets are unchanged.
+
+**Plan review.** Every other week, after "Commit to the week": two weeks of each habit, each
+pillar's 4-week trend, and at most one proposal. First match wins: a habit met both weeks with
+a flat pillar steps up; a habit missed both weeks gets a smaller target; a pillar past its goal
+is offered the next goal from `settings.json`; otherwise stay the course. Accept writes a dated
+plan version into `config.json` and the goal into `settings.json` (only that number changes).
+Every decision is appended to `app/plan_review.json`, and the morning guide now tells the run to
+explain it. Pillar trends come from check-ins, Health and a daily record the app keeps from
+`data.json`; Strength has no trend until that record is four weeks old.
+
+**App icon.** D1 "Rising progress", rendered from the spec's geometry at 1024 px in standard,
+dark and tinted variants (`App/Assets.xcassets`).
+
+**New-issue alert.** When a newer file appears in `newsletter/issues`, the app posts a local
+notification with the lead headline (Settings → The Surf Report). It fires from the folder
+watch and from background refresh, and never while the app is in front.
+
+**Guides.** `engine/surf_report_guide.md` now covers the `section` field and plan reviews (old
+copy in `engine/old/surf_report_guide_2026-11-13.md`). The text for
+`surf-at-60/dashboard-guide.md` is in `docs/dashboard-guide-app-section.md`, to paste into the
+Live Well project.
+
+### Trying the follow-ups
+
+1. Run `python3 engine/compare_trial.py --days 7` on the Mac each day of the trial.
+2. Add the small and medium widgets to a home screen; try tinted mode and StandBy.
+3. Close a week in Check-in and go through the plan review. Accept only a change you want: it
+   edits `settings.json`.
+4. Leave the app in the background overnight and see whether the new-issue alert arrives.
+5. Log a workout from Today and check the Watch rings before the log sheet promises credit.
+
 ## Trial mode (the spec's cutover plan)
 
 Trial mode is on by default. The app writes to `health_app/` (including
@@ -135,8 +192,8 @@ retire the Shortcuts and automations. The app never writes anything in `engine/`
 
 ## Not built yet
 
-The home-screen and StandBy widgets; the biweekly plan review; an app icon; a notification
-when a new issue arrives.
+Money and Family sections (the architecture is in; there is no content yet); swiping between
+stories full screen in the Report; Phase 3 experiments.
 
 ## Running the core tests
 

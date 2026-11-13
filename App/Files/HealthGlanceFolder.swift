@@ -75,6 +75,32 @@ final class HealthGlanceFolder: NSObject, NSFilePresenter {
         return FileManager.default.fileExists(atPath: url.appendingPathComponent(relativePath).path)
     }
 
+    /// Moves a file within the folder, creating the destination's folder. Does nothing when the
+    /// file isn't there; a file already at the destination gets a numbered name instead of being replaced.
+    @discardableResult
+    func move(_ from: String, to: String) throws -> Bool {
+        guard let url, exists(from) else { return false }
+        let source = url.appendingPathComponent(from)
+        var target = url.appendingPathComponent(to)
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        var n = 2
+        while FileManager.default.fileExists(atPath: target.path) {
+            let base = url.appendingPathComponent(to)
+            target = base.deletingLastPathComponent()
+                .appendingPathComponent("\(base.deletingPathExtension().lastPathComponent)-\(n).\(base.pathExtension)")
+            n += 1
+        }
+        var coordinationError: NSError?
+        var result: Result<Void, Error> = .success(())
+        NSFileCoordinator(filePresenter: self).coordinate(writingItemAt: source, options: .forMoving,
+                                                          writingItemAt: target, options: .forReplacing, error: &coordinationError) { a, b in
+            result = Result { try FileManager.default.moveItem(at: a, to: b) }
+        }
+        if let coordinationError { throw coordinationError }
+        try result.get()
+        return true
+    }
+
     /// Whole-file atomic write. Skips identical content unless `always` is set.
     @discardableResult
     func write(_ text: String, to relativePath: String, always: Bool = false) throws -> AtomicFile.Outcome {

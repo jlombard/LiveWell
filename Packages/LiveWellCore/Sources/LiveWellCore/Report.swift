@@ -170,10 +170,12 @@ public struct ReportCard: Decodable, Equatable, Identifiable, Sendable {
     public var lesson: Lesson?
     public var quiz: Quiz?
     public var starters: [String]
+    /// The section this card belongs to (nil = the issue's section).
+    public var section: String?
 
     enum Keys: String, CodingKey {
         case id, kind, label, title, pillar, tag, win, why, body, bullets, figure, figureAfter
-        case tryIt = "try", sub, source, recipe, lesson, quiz, starters
+        case tryIt = "try", sub, source, recipe, lesson, quiz, starters, section
     }
     private enum Inner: String, CodingKey {
         case label, text, ingredients, steps, copyText, tag, body, source, options, reveal, t, right
@@ -202,6 +204,7 @@ public struct ReportCard: Decodable, Equatable, Identifiable, Sendable {
         sub = c.lenient(String.self, .sub)
         source = c.lenient(ReportSource.self, .source)
         starters = c.lenient([String].self, .starters) ?? []
+        section = c.lenient(String.self, .section).flatMap { $0.isEmpty ? nil : $0.lowercased() }
         if let t = try? c.nestedContainer(keyedBy: Inner.self, forKey: .tryIt), let text = t.lenient(String.self, .text) {
             tryIt = Try(label: t.lenient(String.self, .label) ?? "Try it", text: text)
         }
@@ -267,11 +270,23 @@ public struct ReportIssue: Decodable, Equatable, Identifiable, Sendable {
     public var planStarters: [String]
     public var plate: Plate?
     public var cards: [ReportCard]
+    /// The issue's section (existing issues have none and are Health). A card can name its own.
+    public var section: String
 
     public var id: String { date }
 
+    /// The section a card belongs to: its own, else the issue's.
+    public func section(of card: ReportCard) -> String { card.section ?? section }
+
+    /// Sections with at least one content card, in the order they first appear.
+    public var sections: [String] {
+        var seen: [String] = []
+        for card in contentCards where !seen.contains(section(of: card)) { seen.append(section(of: card)) }
+        return seen
+    }
+
     enum Keys: String, CodingKey {
-        case date, issue, intro, profile, cards, plate
+        case date, issue, intro, profile, cards, plate, section
         case planGoal = "plan_goal", planDefinition = "plan_definition", planStarters = "plan_starters"
     }
     private enum PlateKeys: String, CodingKey { case label, text }
@@ -286,6 +301,7 @@ public struct ReportIssue: Decodable, Equatable, Identifiable, Sendable {
         planDefinition = c.lenient(String.self, .planDefinition)
         planStarters = c.lenient([String].self, .planStarters) ?? []
         cards = c.lenient(LossyArray<ReportCard>.self, .cards)?.elements ?? []
+        section = c.lenient(String.self, .section).flatMap { $0.isEmpty ? nil : $0.lowercased() } ?? SectionDefinition.healthKey
         if let p = try? c.nestedContainer(keyedBy: PlateKeys.self, forKey: .plate), let text = p.lenient(String.self, .text) {
             plate = Plate(label: p.lenient(String.self, .label) ?? "Today's plate", text: text)
         } else if let text = c.lenient(String.self, .plate) {
@@ -306,6 +322,7 @@ public struct ReportArchive: Equatable, Sendable {
     public struct Entry: Equatable, Identifiable, Sendable {
         public var date: String; public var issue: Int?; public var lead: String
         public var count: Int; public var recipes: Int
+        public var sections: [String] = []
         public var id: String { date }
     }
     public struct RecipeEntry: Equatable, Identifiable, Sendable {
@@ -319,12 +336,19 @@ public struct ReportArchive: Equatable, Sendable {
 
     public init() {}
 
+    /// Every section that has appeared in any issue, in first-seen order from the newest issue back.
+    public var sections: [String] {
+        var seen: [String] = []
+        for entry in issues { for s in entry.sections where !seen.contains(s) { seen.append(s) } }
+        return seen
+    }
+
     public init(issues all: [ReportIssue]) {
         for issue in all.sorted(by: { $0.date > $1.date }) {
             let cards = issue.contentCards
             let withRecipes = cards.filter { $0.recipe != nil }
             issues.append(Entry(date: issue.date, issue: issue.issue, lead: cards.first?.title ?? "",
-                                count: cards.count, recipes: withRecipes.count))
+                                count: cards.count, recipes: withRecipes.count, sections: issue.sections))
             recipes += withRecipes.map { RecipeEntry(date: issue.date, card: $0) }
         }
     }

@@ -20,12 +20,15 @@
 		93973B4D6E92A884624ACF94 /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A12BBCBA24966D748D1262D9 /* InstrumentSerif-Regular.ttf */; };
 		9B1C645056A4A0450EDBD119 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */; };
 		A2A238A33411711970E20422 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */; };
+		B3A0570F2BA4AE7BAC7F544F /* PlanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9342953812CACD4245AEB2 /* PlanReviewView.swift */; };
 		BE0CA26DAA74B8C73E9D5A06 /* ReportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */; };
 		BFA23E44020662F066709730 /* HealthSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB650A81CD9125680F4D4444 /* HealthSync.swift */; };
 		C669143D2072B756AA7B4FBF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B732B6B4407B2E8DED83B1 /* Theme.swift */; };
+		CF20A5D3CBD0B17870A920E4 /* PlanReviewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD06F57C43CE23F23BCFCF8 /* PlanReviewModel.swift */; };
 		CF3DEFC74F448E1DAC88D65F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7249793B0C8B82CEDB47FC /* Models.swift */; };
 		E3F1FA6D1C2758B81D40ABAC /* HealthGlanceFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99B281BD9F45A3192C07F8D5 /* HealthGlanceFolder.swift */; };
 		E9004640AE00B15E1D34901D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCF3056296841FD2F6407BB /* AppModel.swift */; };
+		EA5D244B8917A4A317703E91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E18292B2823A0345EC79521 /* Assets.xcassets */; };
 		EF98BDC01981A1F0E51B221E /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BAD1899A00CC1C5B8813EEB /* TodayView.swift */; };
 		F18974E87B1C4480EF680CA6 /* InstrumentSerif-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */; };
 		F241CC4A5027E097E26AC95E /* FigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */; };
@@ -71,6 +74,8 @@
 		35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoDeeperSheet.swift; sourceTree = "<group>"; };
 		420E3A7C1EDBECFF6D6FCC15 /* LiveWell.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LiveWell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C1D3661D3A121CDC0BC5110 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4C9342953812CACD4245AEB2 /* PlanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewView.swift; sourceTree = "<group>"; };
+		4E18292B2823A0345EC79521 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
 		4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWellWidget.swift; sourceTree = "<group>"; };
 		96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
@@ -80,6 +85,7 @@
 		AA8A5864FECAB8DD952A46FB /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		AB650A81CD9125680F4D4444 /* HealthSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSync.swift; sourceTree = "<group>"; };
 		B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
+		BAD06F57C43CE23F23BCFCF8 /* PlanReviewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewModel.swift; sourceTree = "<group>"; };
 		C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FigureView.swift; sourceTree = "<group>"; };
 		D2B732B6B4407B2E8DED83B1 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LiveWellWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -110,6 +116,7 @@
 		2FD9E0FFF79B9C05A83DA492 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				4E18292B2823A0345EC79521 /* Assets.xcassets */,
 				4C1D3661D3A121CDC0BC5110 /* Info.plist */,
 				016404FE185B237FF15427C1 /* LiveWell.entitlements */,
 				1CA20FCF1A2866F2640C46FC /* LiveWellApp.swift */,
@@ -147,6 +154,7 @@
 			children = (
 				9FCF3056296841FD2F6407BB /* AppModel.swift */,
 				1A7249793B0C8B82CEDB47FC /* Models.swift */,
+				BAD06F57C43CE23F23BCFCF8 /* PlanReviewModel.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -221,6 +229,7 @@
 			children = (
 				2DE7DC0B1484953DD2479F99 /* CheckinView.swift */,
 				35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */,
+				4C9342953812CACD4245AEB2 /* PlanReviewView.swift */,
 				0F4A8E74191D0348DE681202 /* ReportView.swift */,
 				E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */,
 				2BAD1899A00CC1C5B8813EEB /* TodayView.swift */,
@@ -335,6 +344,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EA5D244B8917A4A317703E91 /* Assets.xcassets in Resources */,
 				F18974E87B1C4480EF680CA6 /* InstrumentSerif-Italic.ttf in Resources */,
 				93973B4D6E92A884624ACF94 /* InstrumentSerif-Regular.ttf in Resources */,
 				6C194F742C46154C258C3CC1 /* OFL.txt in Resources */,
@@ -367,6 +377,8 @@
 				BFA23E44020662F066709730 /* HealthSync.swift in Sources */,
 				68E6A67A03584F5611250014 /* LiveWellApp.swift in Sources */,
 				CF3DEFC74F448E1DAC88D65F /* Models.swift in Sources */,
+				CF20A5D3CBD0B17870A920E4 /* PlanReviewModel.swift in Sources */,
+				B3A0570F2BA4AE7BAC7F544F /* PlanReviewView.swift in Sources */,
 				BE0CA26DAA74B8C73E9D5A06 /* ReportStore.swift in Sources */,
 				5C17144813A5DD413DF91596 /* ReportView.swift in Sources */,
 				78F0CF9E35A5941104658E41 /* RichTextView.swift in Sources */,

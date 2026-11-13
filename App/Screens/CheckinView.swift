@@ -406,7 +406,7 @@ struct RevealView: View {
 
     private func habitRow(_ status: HabitStatus, _ value: Double) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: HabitSymbol.name(status.key)).foregroundStyle(Theme.accent)
+            Image(systemName: status.symbol ?? HabitSymbol.name(status.key)).foregroundStyle(Theme.accent)
                 .frame(width: 36, height: 36).background(Theme.accent.opacity(0.16), in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.goal >= 100 ? "\(Int(value)) \(status.name.lowercased()) minutes" : "\(Int(value)) of \(Int(status.goal)) \(status.name.lowercased())")
@@ -430,6 +430,7 @@ struct CloseWeekView: View {
     @State private var committed: Set<String> = []
     @State private var reflection = ""
     @State private var done = false
+    @State private var reviewing = false
 
     private let prompt = "What feels easier lately?"
     /// Asked about one week in four, never required.
@@ -439,7 +440,9 @@ struct CloseWeekView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
-            if done { finished } else { choosing }
+            if done { finished }
+            else if reviewing { PlanReviewView { withAnimation(.easeInOut(duration: 0.8)) { done = true } } }
+            else { choosing }
         }
         .preferredColorScheme(.dark)
     }
@@ -489,7 +492,8 @@ struct CloseWeekView: View {
                     PrimaryButton(title: "Commit") {
                         model.commitWeek(habits: Array(committed), reflection: askReflection ? reflection : nil, prompt: prompt)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        withAnimation(.easeInOut(duration: 0.8)) { done = true }
+                        // Every other week the plan review comes next.
+                        withAnimation(.easeInOut(duration: 0.8)) { if model.reviewDue { reviewing = true } else { done = true } }
                     }
                     .padding(.top, 20)
                 }

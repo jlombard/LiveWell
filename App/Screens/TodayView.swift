@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import LiveWellCore
 
-/// Today: the one line for the day, five habit tiles (tap to log), five progress bars.
+/// Today: the one line for the day, the dashboard section's habit tiles (tap to log) and progress bars.
 struct TodayView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -160,7 +160,7 @@ struct HabitTile: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 6) {
-                Image(systemName: HabitSymbol.name(status.key))
+                Image(systemName: status.symbol ?? HabitSymbol.name(status.key))
                     .font(.system(size: 20))
                     .foregroundStyle(status.met ? Theme.accent : Theme.text)
                     .frame(height: 24)

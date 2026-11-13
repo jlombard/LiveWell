@@ -22,7 +22,8 @@ struct SettingsView: View {
                 } header: { Text("Folder") } footer: {
                     Text(model.settings.trialMode
                          ? "Writing to health_app/ so you can compare with the Shortcuts' files; the live files in health/ and checkins.csv aren't touched. Food check-ins made here still count: the morning run folds them in."
-                         : "Writing the live files in health/ (including plan_days.csv) and checkins.csv. Turn the Export Shortcut, the Watch automations and the Monday Shortcut off, and do the food check-in here, not on the web page.")
+                         : "Writing the live files in health/ (including plan_days.csv) and checkins.csv. Turn the Export Shortcut, the Watch automations and the Monday Shortcut off, and do the food check-in here, not on the web page. "
+                         + (model.cutoverNote ?? "Turning trial mode off moves health/workouts_log.csv to health/old/."))
                 }
 
                 Section {
@@ -48,6 +49,12 @@ struct SettingsView: View {
                     }
                 } header: { Text("Go deeper chat") } footer: {
                     Text("Questions you ask on a Surf Report card go from this phone straight to Anthropic, billed to your API account. The key is kept in the iOS Keychain and never written to the Health Glance folder.")
+                }
+
+                Section {
+                    Toggle("New issue alert", isOn: $model.settings.issueAlerts)
+                } header: { Text("The Surf Report") } footer: {
+                    Text("A notification with the lead headline as soon as a new issue reaches the phone. iOS decides when background checks run, so it can arrive a little after the morning run finishes.")
                 }
 
                 Section("Monday check-in reminder") {
