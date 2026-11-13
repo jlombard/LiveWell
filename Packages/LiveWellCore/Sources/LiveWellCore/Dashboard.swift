@@ -68,9 +68,10 @@ public enum HabitCounter {
     /// Counts each habit over the window ending today.
     /// - workouts: rows as written to workouts.csv (type already mapped).
     /// - exerciseMinutes: per-day totals; nil when Health gave nothing (shows "not measured").
-    /// - mac: data.json, used for habits the app can't count itself (plan days).
+    /// - mac: data.json, the fallback for plan days when the app has no check-ins of its own.
+    /// - planDays: on-plan days from the app's food check-in (nil = nothing logged in the app).
     public static func statuses(config: SurfConfig, workouts: [WorkoutRow], exerciseMinutes: [DatedValue]?,
-                                mac: DashboardData?, now: Date, calendar: Calendar) -> [HabitStatus] {
+                                mac: DashboardData?, planDays: Int? = nil, now: Date, calendar: Calendar) -> [HabitStatus] {
         let start = windowStart(now: now, days: config.habitWindowDays, calendar: calendar)
         return config.habits.map { habit in
             switch habit.source {
@@ -86,6 +87,9 @@ public enum HabitCounter {
                 let sum = exerciseMinutes.filter { $0.date >= start && $0.date <= now }.reduce(0) { $0 + $1.value }
                 return HabitStatus(key: habit.key, name: habit.name, value: sum.rounded(), goal: habit.goal, provenance: .measured)
             case .planDays:
+                if let planDays {
+                    return HabitStatus(key: habit.key, name: habit.name, value: Double(planDays), goal: habit.goal, provenance: .manual)
+                }
                 let fromMac = mac?.habits.first { $0.key == habit.key }
                 return HabitStatus(key: habit.key, name: habit.name, value: fromMac?.value,
                                    goal: habit.goal, provenance: fromMac?.value == nil ? .missing : .manual)

@@ -25,6 +25,24 @@ struct AppSettings: Codable, Equatable {
     var exerciseDays = 35
     var sleepDays = 14
     var formats = ExportFormats()
+    /// The Claude model the Go deeper chat uses.
+    var chatModel = ClaudeClient.defaultModel
+
+    init() {}
+
+    /// A settings file saved by an older build is missing newer keys; they take their defaults.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = AppSettings()
+        trialMode = try c.decodeIfPresent(Bool.self, forKey: .trialMode) ?? d.trialMode
+        reminderOn = try c.decodeIfPresent(Bool.self, forKey: .reminderOn) ?? d.reminderOn
+        reminderHour = try c.decodeIfPresent(Int.self, forKey: .reminderHour) ?? d.reminderHour
+        reminderMinute = try c.decodeIfPresent(Int.self, forKey: .reminderMinute) ?? d.reminderMinute
+        exerciseDays = try c.decodeIfPresent(Int.self, forKey: .exerciseDays) ?? d.exerciseDays
+        sleepDays = try c.decodeIfPresent(Int.self, forKey: .sleepDays) ?? d.sleepDays
+        formats = (try? c.decodeIfPresent(ExportFormats.self, forKey: .formats)) ?? d.formats
+        chatModel = try c.decodeIfPresent(String.self, forKey: .chatModel) ?? d.chatModel
+    }
 
     var healthFolder: String { trialMode ? "health_app" : "health" }
     var checkinsPath: String { trialMode ? "health_app/checkins.csv" : "checkins.csv" }
@@ -45,9 +63,17 @@ final class AppModel {
     let container: ModelContainer
     let health = HealthSync()
     let folder = HealthGlanceFolder()
+    let report: ReportStore
 
     var config: SurfConfig { didSet { if config != oldValue { persist(config, "config.json"); recompute() } } }
-    var settings: AppSettings { didSet { if settings != oldValue { persist(settings, "settings.json"); scheduleReminder() } } }
+    var settings: AppSettings {
+        didSet {
+            guard settings != oldValue else { return }
+            persist(settings, "settings.json")
+            scheduleReminder()
+            if settings.trialMode != oldValue.trialMode { Task { await report.reload() } }
+        }
+    }
 
     private(set) var dashboard: DashboardData?
     private(set) var statuses: [HabitStatus] = []
@@ -71,12 +97,22 @@ final class AppModel {
     init() {
         container = try! ModelContainer(for: WorkoutEntry.self, HealthReading.self, MeasurementEntry.self,
                                         Reflection.self, WeekCommitment.self)
+        report = ReportStore(folder: folder)
         config = Self.load("config.json") ?? .default
         settings = Self.load("settings.json") ?? AppSettings()
         fileStatus = Self.load("filestatus.json") ?? [:]
         exerciseMinutes = Self.load("exercise.json")
+        #if DEBUG && targetEnvironment(simulator)
+        // Simulator only: `-demoFolder <path>` links a folder on the Mac without the file picker.
+        if let path = UserDefaults.standard.string(forKey: "demoFolder") { try? folder.link(URL(fileURLWithPath: path)) }
+        if UserDefaults.standard.string(forKey: "demoTab") == "report" { tab = .report }
+        #endif
         folderLinked = folder.isLinked
         folder.onDashboardChange = { [weak self] in self?.loadDashboard() }
+        folder.onReportChange = { [weak self] in Task { await self?.report.reload() } }
+        report.trialMode = { [weak self] in self?.settings.trialMode ?? true }
+        report.onPlanChange = { [weak self] in self?.recompute() }
+        Task { await report.reload() }
         loadDashboard()
         loadCheckins()
         recompute()
@@ -113,7 +149,7 @@ final class AppModel {
             folderLinked = folder.isLinked
             loadDashboard()
             loadCheckins()
-            Task { await sync() }
+            Task { await report.reload(); await sync() }
         } catch {
             syncError = error.localizedDescription
         }
@@ -153,6 +189,7 @@ final class AppModel {
         loadDashboard()
         loadCheckins()
         recompute()
+        await report.reload()
     }
 
     func workoutRows() -> [WorkoutRow] {
@@ -210,7 +247,8 @@ final class AppModel {
     private func recompute() {
         let now = Date()
         statuses = HabitCounter.statuses(config: config, workouts: workoutRows(), exerciseMinutes: exerciseMinutes,
-                                         mac: dashboard, now: now, calendar: calendar)
+                                         mac: dashboard, planDays: report.planCount(today: GoalMath.dayString(now, calendar: calendar)),
+                                         now: now, calendar: calendar)
         let snapshot = WidgetSnapshot.make(config: config, statuses: statuses, mac: dashboard,
                                            todayString: GoalMath.dayString(now, calendar: calendar), now: now)
         if AppGroup.writeSnapshot(snapshot) { WidgetCenter.shared.reloadAllTimelines() }
@@ -222,6 +260,9 @@ final class AppModel {
     }
 
     // MARK: Today
+
+    /// Today as yyyy-MM-dd, in the phone's time zone.
+    var today: String { GoalMath.dayString(Date(), calendar: calendar) }
 
     var todayLine: String {
         let today = GoalMath.dayString(Date(), calendar: calendar)
@@ -316,6 +357,9 @@ final class AppModel {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["checkin"])
         guard settings.reminderOn else { return }
+        #if DEBUG && targetEnvironment(simulator)
+        if UserDefaults.standard.string(forKey: "demoFolder") != nil { return }   // no permission prompt over demo screens
+        #endif
         let hour = settings.reminderHour, minute = settings.reminderMinute
         center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
@@ -326,7 +370,7 @@ final class AppModel {
             var when = DateComponents()
             when.weekday = 2; when.hour = hour; when.minute = minute
             let trigger = UNCalendarNotificationTrigger(dateMatching: when, repeats: true)
-            center.add(UNNotificationRequest(identifier: "checkin", content: content, trigger: trigger))
+            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "checkin", content: content, trigger: trigger))
         }
     }
 

@@ -4,7 +4,7 @@ import LiveWellCore
 /// The container the app and the widget share. The id must match both .entitlements files
 /// (set in project.yml).
 enum AppGroup {
-    static let id = "group.livewell.shared"
+    static let id = "group.ink.boundless.livewell"
 
     static var container: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)

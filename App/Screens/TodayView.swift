@@ -8,7 +8,6 @@ struct TodayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var logging: HabitDefinition?
     @State private var showSettings = false
-    @State private var planNote = false
     /// Bar positions on screen; start at the values last seen and glide to today's.
     @State private var shown: [String: Double] = [:]
     @State private var deltas: [String: String] = [:]
@@ -47,11 +46,6 @@ struct TodayView: View {
                     }
                 }
                 .padding(.top, 10)
-
-                if planNote {
-                    Text("Food check-in moves into the app in Phase 2. Until then it stays on the Surf Report page.")
-                        .font(.footnote).foregroundStyle(Theme.secondary).padding(.top, 10)
-                }
 
                 Eyebrow("Progress").padding(.top, 26)
 
@@ -110,7 +104,7 @@ struct TodayView: View {
     private func tap(_ status: HabitStatus) {
         guard let habit = model.config.habit(status.key) else { return }
         if habit.logsAs != nil { logging = habit }
-        else if case .planDays = habit.source { planNote.toggle() }
+        else if case .planDays = habit.source { model.tab = .report }   // the food check-in opens the Report
     }
 
     /// Each bar moves once from the value last seen to today's, staggered, under about 1.5 s.

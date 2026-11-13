@@ -8,6 +8,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFolder = false
     @State private var newActivity = ""
+    @State private var keyDraft = ""
+    @State private var hasKey = Keychain.apiKey != nil
 
     var body: some View {
         @Bindable var model = model
@@ -19,8 +21,8 @@ struct SettingsView: View {
                     Toggle("Trial mode", isOn: $model.settings.trialMode)
                 } header: { Text("Folder") } footer: {
                     Text(model.settings.trialMode
-                         ? "Writing to health_app/ so you can compare with the Shortcuts' files. Nothing the Mac reads is touched."
-                         : "Writing the live files in health/ and checkins.csv. Turn the Export Shortcut, the Watch automations and the Monday Shortcut off.")
+                         ? "Writing to health_app/ so you can compare with the Shortcuts' files; the live files in health/ and checkins.csv aren't touched. Food check-ins made here still count: the morning run folds them in."
+                         : "Writing the live files in health/ (including plan_days.csv) and checkins.csv. Turn the Export Shortcut, the Watch automations and the Monday Shortcut off, and do the food check-in here, not on the web page.")
                 }
 
                 Section {
@@ -29,6 +31,23 @@ struct SettingsView: View {
                     }
                 } header: { Text("Apple Health") } footer: {
                     Text("Reads workouts, Exercise minutes, VO\u{2082} max, weight and sleep. Saves a workout only when you log one on Today. Nothing leaves your phone except the files in your own iCloud folder.")
+                }
+
+                Section {
+                    if hasKey {
+                        LabeledContent("API key", value: "Saved on this phone")
+                        Button("Remove key", role: .destructive) { Keychain.apiKey = nil; hasKey = false }
+                    } else {
+                        SecureField("Anthropic API key", text: $keyDraft)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        Button("Save key") { Keychain.apiKey = keyDraft; keyDraft = ""; hasKey = Keychain.apiKey != nil }
+                            .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    Picker("Model", selection: $model.settings.chatModel) {
+                        ForEach(ClaudeClient.models, id: \.id) { Text($0.name).tag($0.id) }
+                    }
+                } header: { Text("Go deeper chat") } footer: {
+                    Text("Questions you ask on a Surf Report card go from this phone straight to Anthropic, billed to your API account. The key is kept in the iOS Keychain and never written to the Health Glance folder.")
                 }
 
                 Section("Monday check-in reminder") {
@@ -122,22 +141,5 @@ struct SettingsView: View {
 
     private func mapBinding(_ activity: String) -> Binding<String> {
         Binding { model.config.workoutTypeMap[activity] ?? "" } set: { model.config.workoutTypeMap[activity] = $0 }
-    }
-}
-
-/// Report tab. The Surf Report arrives in Phase 2; until then this says so plainly.
-struct ReportView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HorizonHeader()
-            Text("The Surf Report").font(Theme.serif(40, relativeTo: .largeTitle)).foregroundStyle(Theme.text).padding(.top, 24)
-            Text("Reading the Report here is Phase 2. For now it stays on its web page, written each morning as usual.")
-                .font(.subheadline).foregroundStyle(Theme.secondary).padding(.top, 10)
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.bg)
     }
 }

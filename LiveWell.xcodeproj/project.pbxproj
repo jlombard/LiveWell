@@ -1,0 +1,636 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		23F405930DA8F3CC6F905835 /* GoDeeperSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */; };
+		26F261D45F771394908802BB /* LiveWellCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7A64E5A3E1EE68B1930EBEB7 /* LiveWellCore */; };
+		37294F59E5F22D2D7670CB90 /* ClaudeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */; };
+		47353084A345F524498BCE3B /* LiveWellWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5AC7F1E5F7BF828FFE444B35 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */; };
+		5C17144813A5DD413DF91596 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4A8E74191D0348DE681202 /* ReportView.swift */; };
+		65D3E384514DA00D38AABC1C /* LiveWellWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */; };
+		68E6A67A03584F5611250014 /* LiveWellApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CA20FCF1A2866F2640C46FC /* LiveWellApp.swift */; };
+		6C194F742C46154C258C3CC1 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = AA8A5864FECAB8DD952A46FB /* OFL.txt */; };
+		78F0CF9E35A5941104658E41 /* RichTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C3C99F6A4AE67B118A37D37 /* RichTextView.swift */; };
+		93973B4D6E92A884624ACF94 /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A12BBCBA24966D748D1262D9 /* InstrumentSerif-Regular.ttf */; };
+		9B1C645056A4A0450EDBD119 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */; };
+		A2A238A33411711970E20422 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */; };
+		BE0CA26DAA74B8C73E9D5A06 /* ReportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */; };
+		BFA23E44020662F066709730 /* HealthSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB650A81CD9125680F4D4444 /* HealthSync.swift */; };
+		C669143D2072B756AA7B4FBF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B732B6B4407B2E8DED83B1 /* Theme.swift */; };
+		CF3DEFC74F448E1DAC88D65F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7249793B0C8B82CEDB47FC /* Models.swift */; };
+		E3F1FA6D1C2758B81D40ABAC /* HealthGlanceFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99B281BD9F45A3192C07F8D5 /* HealthGlanceFolder.swift */; };
+		E9004640AE00B15E1D34901D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCF3056296841FD2F6407BB /* AppModel.swift */; };
+		EF98BDC01981A1F0E51B221E /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BAD1899A00CC1C5B8813EEB /* TodayView.swift */; };
+		F18974E87B1C4480EF680CA6 /* InstrumentSerif-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */; };
+		F241CC4A5027E097E26AC95E /* FigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */; };
+		F47427C09519A926B887943E /* CheckinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE7DC0B1484953DD2479F99 /* CheckinView.swift */; };
+		FCB1D1A3044F8895FA7916B1 /* LiveWellCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6D05275FAF78DA2B7C85A360 /* LiveWellCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D82C4E4719C6064572B7329F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EB35B981598F32D589F6883F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 76EE84AE0172B6E6D0F29008;
+			remoteInfo = LiveWellWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		281BB702ACFDE99D85F75D58 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				47353084A345F524498BCE3B /* LiveWellWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		016404FE185B237FF15427C1 /* LiveWell.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LiveWell.entitlements; sourceTree = "<group>"; };
+		0F4A8E74191D0348DE681202 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
+		16ACAE44E53C7071CB18E027 /* LiveWellCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LiveWellCore; path = Packages/LiveWellCore; sourceTree = SOURCE_ROOT; };
+		1A7249793B0C8B82CEDB47FC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		1CA20FCF1A2866F2640C46FC /* LiveWellApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWellApp.swift; sourceTree = "<group>"; };
+		21B6E946CC52DFAFAD622E64 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		29ADBD08DE59DDF165DFA9C4 /* LiveWellWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LiveWellWidget.entitlements; sourceTree = "<group>"; };
+		2BAD1899A00CC1C5B8813EEB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		2C3C99F6A4AE67B118A37D37 /* RichTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextView.swift; sourceTree = "<group>"; };
+		2DE7DC0B1484953DD2479F99 /* CheckinView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckinView.swift; sourceTree = "<group>"; };
+		35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoDeeperSheet.swift; sourceTree = "<group>"; };
+		420E3A7C1EDBECFF6D6FCC15 /* LiveWell.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LiveWell.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C1D3661D3A121CDC0BC5110 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
+		4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWellWidget.swift; sourceTree = "<group>"; };
+		96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
+		99B281BD9F45A3192C07F8D5 /* HealthGlanceFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthGlanceFolder.swift; sourceTree = "<group>"; };
+		9FCF3056296841FD2F6407BB /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A12BBCBA24966D748D1262D9 /* InstrumentSerif-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Regular.ttf"; sourceTree = "<group>"; };
+		AA8A5864FECAB8DD952A46FB /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
+		AB650A81CD9125680F4D4444 /* HealthSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSync.swift; sourceTree = "<group>"; };
+		B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
+		C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FigureView.swift; sourceTree = "<group>"; };
+		D2B732B6B4407B2E8DED83B1 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LiveWellWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportStore.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		54EEC3C892A7008D0DAFE8FB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FCB1D1A3044F8895FA7916B1 /* LiveWellCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		903294EAD22989D44261D134 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				26F261D45F771394908802BB /* LiveWellCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2FD9E0FFF79B9C05A83DA492 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				4C1D3661D3A121CDC0BC5110 /* Info.plist */,
+				016404FE185B237FF15427C1 /* LiveWell.entitlements */,
+				1CA20FCF1A2866F2640C46FC /* LiveWellApp.swift */,
+				D27B753C7A064BF6D7A29EA9 /* Files */,
+				FCD07B189974319DF8C9B0D0 /* Health */,
+				A6051DE4C752E9F4EA8BF2D1 /* Report */,
+				3A878F96F5F9168049601B78 /* Resources */,
+				FB3208D8EE9B9776F0966136 /* Screens */,
+				7B7406F02DE138E2834BAFDD /* Store */,
+				9FE584C8A9DEAC7CF42BF090 /* UI */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		3A878F96F5F9168049601B78 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				D687108E8215C3A464B61C36 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		4ABAC06B3AAAD3CF163A91A1 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				21B6E946CC52DFAFAD622E64 /* Info.plist */,
+				29ADBD08DE59DDF165DFA9C4 /* LiveWellWidget.entitlements */,
+				4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
+		7B7406F02DE138E2834BAFDD /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				9FCF3056296841FD2F6407BB /* AppModel.swift */,
+				1A7249793B0C8B82CEDB47FC /* Models.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+		943E714A8F2F7CE70E3BC9E6 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		9FE584C8A9DEAC7CF42BF090 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				D2B732B6B4407B2E8DED83B1 /* Theme.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		A6051DE4C752E9F4EA8BF2D1 /* Report */ = {
+			isa = PBXGroup;
+			children = (
+				4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */,
+				C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */,
+				EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */,
+				2C3C99F6A4AE67B118A37D37 /* RichTextView.swift */,
+			);
+			path = Report;
+			sourceTree = "<group>";
+		};
+		D27B753C7A064BF6D7A29EA9 /* Files */ = {
+			isa = PBXGroup;
+			children = (
+				99B281BD9F45A3192C07F8D5 /* HealthGlanceFolder.swift */,
+			);
+			path = Files;
+			sourceTree = "<group>";
+		};
+		D687108E8215C3A464B61C36 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */,
+				A12BBCBA24966D748D1262D9 /* InstrumentSerif-Regular.ttf */,
+				AA8A5864FECAB8DD952A46FB /* OFL.txt */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		E24AA208078C1481638211B8 = {
+			isa = PBXGroup;
+			children = (
+				2FD9E0FFF79B9C05A83DA492 /* App */,
+				FBDECD704912A9D0B93C638C /* Packages */,
+				943E714A8F2F7CE70E3BC9E6 /* Shared */,
+				4ABAC06B3AAAD3CF163A91A1 /* Widget */,
+				F2CF507A2C5DC4EAB4AF3965 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F2CF507A2C5DC4EAB4AF3965 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				420E3A7C1EDBECFF6D6FCC15 /* LiveWell.app */,
+				DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FB3208D8EE9B9776F0966136 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				2DE7DC0B1484953DD2479F99 /* CheckinView.swift */,
+				35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */,
+				0F4A8E74191D0348DE681202 /* ReportView.swift */,
+				E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */,
+				2BAD1899A00CC1C5B8813EEB /* TodayView.swift */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		FBDECD704912A9D0B93C638C /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				16ACAE44E53C7071CB18E027 /* LiveWellCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		FCD07B189974319DF8C9B0D0 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				AB650A81CD9125680F4D4444 /* HealthSync.swift */,
+			);
+			path = Health;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0CC0E32D2CEE337A9E6D2C19 /* LiveWell */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FBA20E488A50C7E9ECC922A9 /* Build configuration list for PBXNativeTarget "LiveWell" */;
+			buildPhases = (
+				9FD6B4E73C64191902135639 /* Sources */,
+				15032693430C6F2BCCDC22A6 /* Resources */,
+				54EEC3C892A7008D0DAFE8FB /* Frameworks */,
+				281BB702ACFDE99D85F75D58 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A845CFE6BD4D9FEBC05BB6E3 /* PBXTargetDependency */,
+			);
+			name = LiveWell;
+			packageProductDependencies = (
+				6D05275FAF78DA2B7C85A360 /* LiveWellCore */,
+			);
+			productName = LiveWell;
+			productReference = 420E3A7C1EDBECFF6D6FCC15 /* LiveWell.app */;
+			productType = "com.apple.product-type.application";
+		};
+		76EE84AE0172B6E6D0F29008 /* LiveWellWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C4EF694FFCE8D28F720A659 /* Build configuration list for PBXNativeTarget "LiveWellWidget" */;
+			buildPhases = (
+				4A879B96B9C31C5C05B57397 /* Sources */,
+				903294EAD22989D44261D134 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LiveWellWidget;
+			packageProductDependencies = (
+				7A64E5A3E1EE68B1930EBEB7 /* LiveWellCore */,
+			);
+			productName = LiveWellWidget;
+			productReference = DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EB35B981598F32D589F6883F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0CC0E32D2CEE337A9E6D2C19 = {
+						DevelopmentTeam = 597RDXUTMT;
+						ProvisioningStyle = Automatic;
+					};
+					76EE84AE0172B6E6D0F29008 = {
+						DevelopmentTeam = 597RDXUTMT;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = D400A4981E7294F68FAAD1E8 /* Build configuration list for PBXProject "LiveWell" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E24AA208078C1481638211B8;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				98701C0AF6D1AAB926A1AC10 /* XCLocalSwiftPackageReference "Packages/LiveWellCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F2CF507A2C5DC4EAB4AF3965 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0CC0E32D2CEE337A9E6D2C19 /* LiveWell */,
+				76EE84AE0172B6E6D0F29008 /* LiveWellWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		15032693430C6F2BCCDC22A6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F18974E87B1C4480EF680CA6 /* InstrumentSerif-Italic.ttf in Resources */,
+				93973B4D6E92A884624ACF94 /* InstrumentSerif-Regular.ttf in Resources */,
+				6C194F742C46154C258C3CC1 /* OFL.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4A879B96B9C31C5C05B57397 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2A238A33411711970E20422 /* AppGroup.swift in Sources */,
+				65D3E384514DA00D38AABC1C /* LiveWellWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9FD6B4E73C64191902135639 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AC7F1E5F7BF828FFE444B35 /* AppGroup.swift in Sources */,
+				E9004640AE00B15E1D34901D /* AppModel.swift in Sources */,
+				F47427C09519A926B887943E /* CheckinView.swift in Sources */,
+				37294F59E5F22D2D7670CB90 /* ClaudeClient.swift in Sources */,
+				F241CC4A5027E097E26AC95E /* FigureView.swift in Sources */,
+				23F405930DA8F3CC6F905835 /* GoDeeperSheet.swift in Sources */,
+				E3F1FA6D1C2758B81D40ABAC /* HealthGlanceFolder.swift in Sources */,
+				BFA23E44020662F066709730 /* HealthSync.swift in Sources */,
+				68E6A67A03584F5611250014 /* LiveWellApp.swift in Sources */,
+				CF3DEFC74F448E1DAC88D65F /* Models.swift in Sources */,
+				BE0CA26DAA74B8C73E9D5A06 /* ReportStore.swift in Sources */,
+				5C17144813A5DD413DF91596 /* ReportView.swift in Sources */,
+				78F0CF9E35A5941104658E41 /* RichTextView.swift in Sources */,
+				9B1C645056A4A0450EDBD119 /* SettingsView.swift in Sources */,
+				C669143D2072B756AA7B4FBF /* Theme.swift in Sources */,
+				EF98BDC01981A1F0E51B221E /* TodayView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A845CFE6BD4D9FEBC05BB6E3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 76EE84AE0172B6E6D0F29008 /* LiveWellWidget */;
+			targetProxy = D82C4E4719C6064572B7329F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00F6FAD27CF2084BED849AD5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/LiveWell.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ink.boundless.livewell;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0D31B5AAF57C4240F27645F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/LiveWellWidget.entitlements;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ink.boundless.livewell.widget;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		56DFF6D07AF8CEB46BEA3153 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 597RDXUTMT;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7034B4729F0CC53620A0F340 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/LiveWell.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ink.boundless.livewell;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		75CECEA94C2EE72C4B222E57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/LiveWellWidget.entitlements;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ink.boundless.livewell.widget;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D3310B28C8D3135CEF4AAD5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 597RDXUTMT;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6C4EF694FFCE8D28F720A659 /* Build configuration list for PBXNativeTarget "LiveWellWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0D31B5AAF57C4240F27645F9 /* Debug */,
+				75CECEA94C2EE72C4B222E57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D400A4981E7294F68FAAD1E8 /* Build configuration list for PBXProject "LiveWell" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				56DFF6D07AF8CEB46BEA3153 /* Debug */,
+				D3310B28C8D3135CEF4AAD5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FBA20E488A50C7E9ECC922A9 /* Build configuration list for PBXNativeTarget "LiveWell" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7034B4729F0CC53620A0F340 /* Debug */,
+				00F6FAD27CF2084BED849AD5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		98701C0AF6D1AAB926A1AC10 /* XCLocalSwiftPackageReference "Packages/LiveWellCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/LiveWellCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6D05275FAF78DA2B7C85A360 /* LiveWellCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LiveWellCore;
+		};
+		7A64E5A3E1EE68B1930EBEB7 /* LiveWellCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LiveWellCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = EB35B981598F32D589F6883F /* Project object */;
+}

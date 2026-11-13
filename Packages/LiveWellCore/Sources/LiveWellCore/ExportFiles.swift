@@ -1,14 +1,23 @@
 import Foundation
 
 // The files the Mac's build.py reads. Every formatting choice lives in ExportFormats so that
-// matching the existing files byte for byte is an edit to this one struct.
+// matching the existing files is an edit to this one struct.
 //
-// CONFIRMED by the build spec:  workouts.csv rows look like `2026-10-15 20:29,yoga,21`.
-// ASSUMED until checked against engine/build.py and the current files on the Mac:
-//   header rows, exercise_minutes.csv layout, date formats in vo2max/weight, sleep_raw.txt layout.
+// CHECKED against engine/build.py and the files in health/ on 2026-11-12:
+//   - build.py's rows() skips blank lines and any line whose first cell doesn't start with a
+//     yyyy-MM date, so a header row is optional in every file. The defaults below copy what the
+//     Shortcut files have today: workouts.csv has `start,type,minutes`, the others have none.
+//   - Dates are read as the first 10 characters (16 for workout starts, 19 for sleep times).
+//   - vo2max.csv and weight.csv hold one row per reading; build.py sorts by (date, value), so
+//     when a day has two readings the higher one is treated as the latest.
+//   - sleep_raw.txt is `start,end,stage` with seconds. Stages containing core/deep/rem/asleep
+//     count as sleep; "Awake" and "In bed" don't.
+//   - Habit counts match on a substring of the lower-cased type: strength, rowing, yoga.
+//   - build.py reads the modified time of exercise_minutes.csv and sleep_raw.txt to decide
+//     whether Health has synced.
 
 public struct ExportFormats: Codable, Equatable, Sendable {
-    public var workoutsHeader: String? = nil
+    public var workoutsHeader: String? = "start,type,minutes"
     public var workoutStart = "yyyy-MM-dd HH:mm"
 
     public var exerciseHeader: String? = nil
@@ -22,7 +31,7 @@ public struct ExportFormats: Codable, Equatable, Sendable {
     public var weightDate = "yyyy-MM-dd"
     public var weightDecimals = 1
 
-    public var sleepTime = "yyyy-MM-dd HH:mm"
+    public var sleepTime = "yyyy-MM-dd HH:mm:ss"
     public var sleepSeparator = ","
 
     public init() {}
@@ -73,9 +82,10 @@ public struct ExportWriter: Sendable {
     }
 
     static func assemble(header: String?, lines: [String]) -> String {
-        var all = lines
-        if let header { all.insert(header, at: 0) }
-        return all.isEmpty ? "" : all.joined(separator: "\n") + "\n"
+        // No rows means no file content at all (not a lone header), so callers can tell
+        // "Health returned nothing" from real data and leave the existing file alone.
+        if lines.isEmpty { return "" }
+        return (([header].compactMap { $0 }) + lines).joined(separator: "\n") + "\n"
     }
 
     /// Every workout, oldest first: start (local), type, whole minutes.

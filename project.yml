@@ -1,5 +1,5 @@
 # Generates LiveWell.xcodeproj. Run `xcodegen` in this folder after changing this file.
-# Before the first build, set the three values marked CHANGE.
+# Team ID, bundle ids and App Group id are set below (the group id also lives in Shared/AppGroup.swift).
 name: LiveWell
 options:
   deploymentTarget:
@@ -8,7 +8,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    DEVELOPMENT_TEAM: ""                 # CHANGE: your Apple developer Team ID
+    DEVELOPMENT_TEAM: "597RDXUTMT"
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -26,7 +26,7 @@ targets:
       - target: LiveWellWidget
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.livewell          # CHANGE
+        PRODUCT_BUNDLE_IDENTIFIER: ink.boundless.livewell
     info:
       path: App/Info.plist
       properties:
@@ -47,7 +47,7 @@ targets:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
         com.apple.developer.healthkit.background-delivery: true
-        com.apple.security.application-groups: [group.livewell.shared]   # CHANGE with Shared/AppGroup.swift
+        com.apple.security.application-groups: [group.ink.boundless.livewell]   # also in Shared/AppGroup.swift
   LiveWellWidget:
     type: app-extension
     platform: iOS
@@ -56,7 +56,7 @@ targets:
       - package: LiveWellCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.livewell.widget   # CHANGE (app id + .widget)
+        PRODUCT_BUNDLE_IDENTIFIER: ink.boundless.livewell.widget
     info:
       path: Widget/Info.plist
       properties:
@@ -66,4 +66,4 @@ targets:
     entitlements:
       path: Widget/LiveWellWidget.entitlements
       properties:
-        com.apple.security.application-groups: [group.livewell.shared]
+        com.apple.security.application-groups: [group.ink.boundless.livewell]

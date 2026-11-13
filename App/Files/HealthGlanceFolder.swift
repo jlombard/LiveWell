@@ -10,6 +10,8 @@ final class HealthGlanceFolder: NSObject, NSFilePresenter {
     private var accessing = false
     /// Called on the main queue when data.json changes.
     var onDashboardChange: (() -> Void)?
+    /// Called on the main queue when something under newsletter/ or a plan_days.csv changes.
+    var onReportChange: (() -> Void)?
 
     override init() {
         super.init()
@@ -94,9 +96,46 @@ final class HealthGlanceFolder: NSObject, NSFilePresenter {
 
     func presentedSubitemDidChange(at changed: URL) {
         if changed.lastPathComponent == "data.json" { onDashboardChange?() }
+        if changed.path.contains("/newsletter/") || changed.lastPathComponent == "plan_days.csv" { onReportChange?() }
     }
 
     func presentedItemDidChange() {
         onDashboardChange?()
+    }
+}
+
+/// Reads files under the linked folder from any thread (the Surf Report loads off the main
+/// thread, because a file iCloud hasn't downloaded yet blocks until it arrives).
+struct FolderReader: Sendable {
+    let root: URL
+
+    func read(_ relativePath: String) throws -> Data {
+        let target = root.appendingPathComponent(relativePath)
+        try? FileManager.default.startDownloadingUbiquitousItem(at: target)
+        var coordinationError: NSError?
+        var result: Result<Data, Error> = .failure(HealthGlanceFolder.FolderError.notLinked)
+        NSFileCoordinator(filePresenter: nil).coordinate(readingItemAt: target, options: [], error: &coordinationError) { u in
+            result = Result { try Data(contentsOf: u) }
+        }
+        if let coordinationError { throw coordinationError }
+        return try result.get()
+    }
+
+    func text(_ relativePath: String) -> String? {
+        (try? read(relativePath)).flatMap { String(data: $0, encoding: .utf8) }
+    }
+
+    /// File names in a subfolder with their modified times. A file iCloud hasn't downloaded shows
+    /// up as ".name.icloud"; it is listed under its real name.
+    func list(_ relativeDirectory: String) -> [(name: String, modified: Date)] {
+        let dir = root.appendingPathComponent(relativeDirectory)
+        try? FileManager.default.startDownloadingUbiquitousItem(at: dir)
+        let urls = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        return urls.map { url in
+            var name = url.lastPathComponent
+            if name.hasPrefix("."), name.hasSuffix(".icloud") { name = String(name.dropFirst().dropLast(7)) }
+            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            return (name, modified)
+        }
     }
 }

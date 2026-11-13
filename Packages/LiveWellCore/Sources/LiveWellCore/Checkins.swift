@@ -1,7 +1,9 @@
 import Foundation
 
-/// checkins.csv: `date,waist_in,popups_30s,sit_to_rise`, blank fields allowed, never two rows for a date.
-/// Existing lines are kept exactly as they are; only the row for the saved date is added or rewritten.
+/// checkins.csv: `date,waist_in,popups_30s,sit_to_rise`, blank fields allowed.
+/// The Monday Shortcut wrote one row per measurement, so a date can have several rows; they are
+/// read as one (build.py takes the last row in file order that has a value, and so does this).
+/// Lines for other dates are kept exactly as they are; saving a date folds its rows into one.
 public struct CheckinsFile: Equatable, Sendable {
     public static let columns = ["waist_in", "popups_30s", "sit_to_rise"]
     public static let header = "date," + columns.joined(separator: ",")
@@ -44,23 +46,39 @@ public struct CheckinsFile: Equatable, Sendable {
         return s.count == 10 && p.count == 3 && p.allSatisfy { Int($0) != nil }
     }
 
+    /// One row per date (several lines for a date are merged, later lines winning), oldest first.
     public var rows: [Row] {
-        lines.compactMap { if case .row(let r, _) = $0 { return r } else { return nil } }
-            .sorted { $0.date < $1.date }
+        var byDate: [String: Row] = [:]
+        for case .row(let r, _) in lines {
+            byDate[r.date, default: Row(date: r.date, values: [:])].values.merge(r.values) { _, new in new }
+        }
+        return byDate.values.sorted { $0.date < $1.date }
     }
 
     public func row(on date: String) -> Row? { rows.first { $0.date == date } }
 
+    private func date(at index: Int) -> String? {
+        if case .row(let r, _) = lines[index] { return r.date } else { return nil }
+    }
+
     /// Adds values to the row for `date`, creating it if needed. A second save that day replaces
-    /// the same row; fields not passed keep what they had.
+    /// the same row; fields not passed keep what they had. A new date goes in date order, because
+    /// build.py reads "latest" as the last line in the file.
     public mutating func save(date: String, values: [String: Double]) {
-        if let i = lines.firstIndex(where: { if case .row(let r, _) = $0 { return r.date == date } else { return false } }),
-           case .row(var row, _) = lines[i] {
+        let matches = lines.indices.filter { self.date(at: $0) == date }
+        if let first = matches.first {
+            var row = Row(date: date, values: [:])
+            for i in matches {
+                if case .row(let r, _) = lines[i] { row.values.merge(r.values) { _, new in new } }
+            }
             row.values.merge(values) { _, new in new }
-            lines[i] = .row(row, original: nil)
+            lines[first] = .row(row, original: nil)
+            for i in matches.dropFirst().reversed() { lines.remove(at: i) }
         } else {
             if lines.isEmpty { lines.append(.other(Self.header)) }
-            lines.append(.row(Row(date: date, values: values), original: nil))
+            let after = lines.indices.last { i in self.date(at: i).map { $0 <= date } ?? false }
+            let index = after.map { $0 + 1 } ?? lines.indices.first { self.date(at: $0) != nil } ?? lines.count
+            lines.insert(.row(Row(date: date, values: values), original: nil), at: index)
         }
     }
 

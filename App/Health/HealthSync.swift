@@ -232,7 +232,7 @@ enum ActivityNames {
         (.highIntensityIntervalTraining, "highIntensityIntervalTraining"), (.coreTraining, "coreTraining"),
         (.flexibility, "flexibility"), (.cooldown, "cooldown"), (.mindAndBody, "mindAndBody"),
         (.elliptical, "elliptical"), (.stairClimbing, "stairClimbing"), (.stairs, "stairs"),
-        (.mixedCardio, "mixedCardio"), (.crossTraining, "crossTraining"), (.dance, "dance"),
+        (.mixedCardio, "mixedCardio"), (.crossTraining, "crossTraining"), (.socialDance, "socialDance"),
         (.cardioDance, "cardioDance"), (.golf, "golf"), (.tennis, "tennis"), (.pickleball, "pickleball"),
         (.paddleSports, "paddleSports"), (.waterFitness, "waterFitness"), (.downhillSkiing, "downhillSkiing"),
         (.snowboarding, "snowboarding"), (.crossCountrySkiing, "crossCountrySkiing"), (.taiChi, "taiChi"),

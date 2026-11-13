@@ -41,7 +41,7 @@ final class LiveWellCoreTests: XCTestCase {
             WorkoutRow(start: at(2026, 11, 11, 13, 34), type: "strength", minutes: 31.6),
             WorkoutRow(start: at(2026, 10, 15, 20, 29), type: "yoga", minutes: 21.2),
         ])
-        XCTAssertEqual(text, "2026-10-15 20:29,yoga,21\n2026-11-11 13:34,strength,32\n")
+        XCTAssertEqual(text, "start,type,minutes\n2026-10-15 20:29,yoga,21\n2026-11-11 13:34,strength,32\n")
     }
 
     func testOtherFiles() {
@@ -50,14 +50,46 @@ final class LiveWellCoreTests: XCTestCase {
         XCTAssertEqual(w.vo2max([DatedValue(date: at(2026, 11, 7, 9), value: 29.26)]), "2026-11-07,29.26\n")
         XCTAssertEqual(w.weight([DatedValue(date: at(2026, 11, 12, 6), value: 172.1)]), "2026-11-12,172.1\n")
         XCTAssertEqual(w.sleep([SleepRow(start: at(2026, 11, 11, 23, 4), end: at(2026, 11, 12, 0, 10), stage: "Core")]),
-                       "2026-11-11 23:04,2026-11-12 00:10,Core\n")
-        XCTAssertEqual(w.workouts([]), "")
+                       "2026-11-11 23:04:00,2026-11-12 00:10:00,Core\n")
+        // Seconds are kept, as in the Shortcut's file (2026-11-04 00:34:40,2026-11-04 00:57:15,Core).
+        XCTAssertEqual(w.sleep([SleepRow(start: at(2026, 11, 4, 0, 34).addingTimeInterval(40),
+                                         end: at(2026, 11, 4, 0, 57).addingTimeInterval(15), stage: "Core")]),
+                       "2026-11-04 00:34:40,2026-11-04 00:57:15,Core\n")
     }
 
     func testHeadersAreAFormatSetting() {
-        var f = ExportFormats(); f.workoutsHeader = "start,type,minutes"
-        let text = ExportWriter(formats: f, timeZone: tz).workouts([WorkoutRow(start: at(2026, 1, 2, 3, 4), type: "yoga", minutes: 20)])
-        XCTAssertEqual(text, "start,type,minutes\n2026-01-02 03:04,yoga,20\n")
+        var f = ExportFormats(); f.workoutsHeader = nil; f.weightHeader = "date,lb"
+        let w = ExportWriter(formats: f, timeZone: tz)
+        XCTAssertEqual(w.workouts([WorkoutRow(start: at(2026, 1, 2, 3, 4), type: "yoga", minutes: 20)]), "2026-01-02 03:04,yoga,20\n")
+        XCTAssertEqual(w.weight([DatedValue(date: at(2026, 11, 12, 6), value: 172.1)]), "date,lb\n2026-11-12,172.1\n")
+        // No rows gives no text at all, so the app never replaces a file with a lone header.
+        XCTAssertEqual(ExportWriter(timeZone: tz).workouts([]), "")
+    }
+
+    // MARK: checkins.csv as the Monday Shortcut left it (one row per measurement)
+
+    static let shortcutFile = "date,waist_in,popups_30s,sit_to_rise\n2026-11-02,39.8,,\n2026-11-02,,,9.5\n2026-11-02,,9,\n2026-11-09,39.5,,\n2026-11-09,,,9.5\n2026-11-09,,10,"
+
+    func testSeveralRowsForADateReadAsOne() {
+        let f = CheckinsFile(text: Self.shortcutFile)
+        XCTAssertEqual(f.rows.count, 2)
+        XCTAssertEqual(f.row(on: "2026-11-09")?.values, ["waist_in": 39.5, "sit_to_rise": 9.5, "popups_30s": 10])
+        XCTAssertEqual(f.previous("popups_30s", before: "2026-11-09")?.value, 9)
+    }
+
+    func testSavingADateFoldsItsRowsAndLeavesOthersAlone() {
+        var f = CheckinsFile(text: Self.shortcutFile)
+        f.save(date: "2026-11-09", values: ["popups_30s": 11])
+        XCTAssertEqual(f.text, "date,waist_in,popups_30s,sit_to_rise\n2026-11-02,39.8,,\n2026-11-02,,,9.5\n2026-11-02,,9,\n2026-11-09,39.5,11,9.5\n")
+    }
+
+    func testAnEarlierDateGoesInDateOrder() {
+        var f = CheckinsFile(text: Self.shortcutFile)
+        f.save(date: "2026-11-05", values: ["waist_in": 39.6])
+        XCTAssertEqual(f.text.split(separator: "\n")[4], "2026-11-05,39.6,,")
+        var g = CheckinsFile(text: "date,waist_in,popups_30s,sit_to_rise\n2026-11-09,39.5,,\n")
+        g.save(date: "2026-11-02", values: ["waist_in": 40])
+        XCTAssertEqual(g.text, "date,waist_in,popups_30s,sit_to_rise\n2026-11-02,40,,\n2026-11-09,39.5,,\n")
     }
 
     func testAtomicWriteSkipsUnchangedUnlessForced() throws {
@@ -194,5 +226,137 @@ final class LiveWellCoreTests: XCTestCase {
         XCTAssertEqual(Reveal.make(measurement: pop, value: 11, previous: ("2026-11-09", 10), baseline: nil).headline,
                        "1 up since last time.")
         XCTAssertEqual(Reveal.make(measurement: pop, value: 10, previous: nil, baseline: nil).kind, .first)
+    }
+
+    // MARK: The Surf Report
+
+    static let issueJSON = #"""
+    {"date":"2026-11-12","issue":20,"intro":"Hello.","profile":"Reader: Joe.","plan_goal":5,"plan_definition":"Measured nuts.",
+     "plate":{"text":"Box <b>half</b>."},"future_field":{"x":1},
+     "cards":[
+      {"id":"tiles","kind":"you","label":"You","pillar":"Body","tag":"Habits","win":true,
+       "title":"One busy Wednesday <em>filled three tiles.</em>","why":"Row reads <span class=\"num\">1</span> &amp; counting.",
+       "figure":{"type":"tiles","items":[{"v":"3/2","n":"Lift","met":true},{"v":299,"n":"Active min"}]},
+       "body":["<b>A note.</b> Fewer than < 6 hours."],"try":{"label":"Try it today","text":"Walk."},
+       "source":{"text":"Wastyk et al., {link}Gut study{/link}, Cell, 2021.","url":"https://example.org/a"},"starters":["Why?"]},
+      {"id":"spark","kind":"science","label":"Science","title":"T",
+       "figure":{"type":"spark","points":[["Jun",222],["",281.5],["Oct",554]],"marks":{"0":{"text":"222"},"2":{"text":"554","below":true}},"dashLast":true}},
+      {"id":"scale","kind":"lab","label":"Lab","title":"T","figure":{"type":"scale","min":26,"max":41,"ticks":[26,33,41],"band":[33,41],"you":28.4,"goal":33}},
+      {"id":"bad-figure","kind":"you","label":"You","title":"T","figure":"oops","bullets":["one"]},
+      {"id":"stew","kind":"kitchen","label":"Kitchen","pillar":"Body","title":"Kimchi <em>stew</em>","why":"Feeds four.",
+       "recipe":{"ingredients":["kimchi"],"steps":["simmer"],"copyText":"Kimchi stew"},"lesson":{"tag":"fibre","body":["Good."]}},
+      {"id":"q","kind":"quiz","label":"Quick recall","title":"Which?","quiz":{"options":[{"t":"A"},{"t":"B","right":true}],"reveal":"B."}},
+      "not a card",
+      {"id":"end","kind":"end","label":"You're caught up","title":"days until <em>surf camp.</em>","why":"Tomorrow: more."}]}
+    """#
+
+    func testIssueDecodesLeniently() throws {
+        let issue = try ReportIssue.decode(Data(Self.issueJSON.utf8))
+        XCTAssertEqual(issue.issue, 20)
+        XCTAssertEqual(issue.plate?.label, "Today's plate")
+        XCTAssertEqual(issue.cards.map(\.id), ["tiles", "spark", "scale", "bad-figure", "stew", "q", "end"])
+        XCTAssertEqual(issue.contentCards.count, 6)
+        let tiles = try XCTUnwrap(issue.cards[0].figure)
+        XCTAssertEqual(tiles.items, [.init(value: "3/2", name: "Lift", met: true), .init(value: "299", name: "Active min", met: false)])
+        let spark = try XCTUnwrap(issue.cards[1].figure)
+        XCTAssertEqual(spark.points.map(\.value), [222, 281.5, 554])
+        XCTAssertEqual(spark.marks[2]?.below, true)
+        XCTAssertTrue(spark.dashLast)
+        XCTAssertEqual(issue.cards[2].figure?.band, [33, 41])
+        XCTAssertNil(issue.cards[3].figure)            // a malformed figure is dropped, the card stays
+        XCTAssertEqual(issue.cards[3].bullets, ["one"])
+        XCTAssertEqual(issue.cards[5].quiz?.options.map(\.right), [false, true])
+        XCTAssertEqual(issue.cards[0].tryIt?.text, "Walk.")
+    }
+
+    func testRichTextRunsAndPlain() {
+        let runs = RichText.parse("Row reads <span class=\"num\">1</span> &amp; <em>counting</em> <b>now</b>, < 6 h. <a href=\"https://x.org/?a=1&amp;b=2\">Link</a>")
+        XCTAssertEqual(runs[1], RichText.Run(text: "1", number: true))
+        XCTAssertEqual(runs[2].text, " & ")
+        XCTAssertTrue(runs[3].emphasis)
+        XCTAssertTrue(runs[5].bold)
+        XCTAssertEqual(runs.last?.link, "https://x.org/?a=1&b=2")
+        XCTAssertEqual(RichText.plain("One <em>busy</em> day, < 6 h &amp; more"), "One busy day, < 6 h & more")
+    }
+
+    func testSourceLinkAndCardPlainText() throws {
+        let issue = try ReportIssue.decode(Data(Self.issueJSON.utf8))
+        let source = try XCTUnwrap(issue.cards[0].source)
+        XCTAssertEqual(source.parts.link, "Gut study")
+        XCTAssertEqual(source.plain, "Wastyk et al., Gut study, Cell, 2021.")
+        let text = issue.cards[0].plainText
+        XCTAssertTrue(text.hasPrefix("You · Body · Habits\n\nOne busy Wednesday filled three tiles."))
+        XCTAssertTrue(text.contains("Try it today: Walk."))
+        XCTAssertTrue(text.contains("A note. Fewer than < 6 hours."))
+        XCTAssertFalse(text.contains("<b>") || text.contains("<span"))
+    }
+
+    func testArchiveAndRecipeBox() throws {
+        let issue = try ReportIssue.decode(Data(Self.issueJSON.utf8))
+        let archive = ReportArchive(issues: [issue])
+        XCTAssertEqual(archive.issues.first?.count, 6)
+        XCTAssertEqual(archive.issues.first?.recipes, 1)
+        XCTAssertEqual(archive.issues.first?.lead, "One busy Wednesday <em>filled three tiles.</em>")
+        XCTAssertEqual(archive.recipeGroups.map(\.nutrient), ["Fiber"])
+        XCTAssertEqual(ReportFigure.number(1204), "1,204")
+        XCTAssertEqual(ReportFigure.number(28.4), "28.4")
+    }
+
+    // MARK: plan days, feedback
+
+    func testPlanDaysReadsTheMacFileAndWritesNotes() {
+        var f = PlanDaysFile(text: "date,on,slips\n2026-10-30,0,Wine;Eating out or a party\n2026-11-11,1,\n")
+        XCTAssertEqual(f["2026-10-30"]?.slips, ["Wine", "Eating out or a party"])
+        f.save(PlanDay(date: "2026-11-12", on: false, slips: ["Sweets"], note: "Cake, \"just one\"", at: "2026-11-13T07:00:00Z"))
+        XCTAssertEqual(f.text, "date,on,slips,note,at\n2026-10-30,0,Wine;Eating out or a party,,\n2026-11-11,1,,,\n"
+                       + "2026-11-12,0,Sweets,\"Cake, \"\"just one\"\"\",2026-11-13T07:00:00Z\n")
+        XCTAssertEqual(PlanDaysFile(text: f.text), f)
+        // On plan clears the slips.
+        XCTAssertEqual(PlanDay(date: "2026-11-12", on: true, slips: ["Wine"]).slips, [])
+    }
+
+    func testPlanCountIsTheSevenDaysEndingYesterday() {
+        var f = PlanDaysFile()
+        XCTAssertNil(f.count(today: "2026-11-12"))
+        for (d, on) in [("2026-11-04", true), ("2026-11-05", true), ("2026-11-06", true), ("2026-11-07", true),
+                        ("2026-11-08", false), ("2026-11-09", true), ("2026-11-11", true), ("2026-11-12", true)] {
+            f.save(PlanDay(date: d, on: on))
+        }
+        XCTAssertEqual(f.lastSevenDays(before: "2026-11-12").first, "2026-11-05")
+        XCTAssertEqual(f.count(today: "2026-11-12"), 5)   // Nov 4 is too old, Nov 12 is today
+        XCTAssertEqual(DayMath.adding(-1, to: "2026-03-01"), "2026-02-28")
+        XCTAssertEqual(DayMath.dateline("2026-11-12"), "Thu, Nov 12")
+    }
+
+    func testPlanMergeTakesTheNewerEntry() {
+        var live = PlanDaysFile(text: "date,on,slips\n2026-11-10,0,\n2026-11-11,1,,,2026-11-12T09:00:00Z\n")
+        var app = PlanDaysFile()
+        app.save(PlanDay(date: "2026-11-10", on: true, at: "2026-11-12T08:00:00Z"))   // newer than an undated row
+        app.save(PlanDay(date: "2026-11-11", on: false, at: "2026-11-12T08:00:00Z"))  // older than the live one
+        live.merge(app)
+        XCTAssertEqual(live["2026-11-10"]?.on, true)
+        XCTAssertEqual(live["2026-11-11"]?.on, true)
+    }
+
+    func testAppPlanDaysWinOverTheMacCount() throws {
+        let cal = Calendar(identifier: .gregorian)
+        let mac = try DashboardData.decode(Data(#"{"pillars":[],"habits":[{"key":"plan","value":5}]}"#.utf8))
+        let fromMac = HabitCounter.statuses(config: .default, workouts: [], exerciseMinutes: nil, mac: mac, now: Date(), calendar: cal)
+        XCTAssertEqual(fromMac.first { $0.key == "plan" }?.value, 5)
+        let fromApp = HabitCounter.statuses(config: .default, workouts: [], exerciseMinutes: nil, mac: mac, planDays: 6, now: Date(), calendar: cal)
+        XCTAssertEqual(fromApp.first { $0.key == "plan" }?.value, 6)
+    }
+
+    func testVoteAndChatWindow() throws {
+        let issue = try ReportIssue.decode(Data(Self.issueJSON.utf8))
+        let vote = CardVote(vote: 1, issueDate: issue.date, card: issue.cards[0], at: "t")
+        XCTAssertEqual(vote.title, "One busy Wednesday filled three tiles.")
+        XCTAssertEqual(CardVote.key(issueDate: issue.date, cardID: "tiles"), "2026-11-12_tiles")
+        XCTAssertTrue(AppFiles.json(["2026-11-12_tiles": vote]).contains("\"vote\" : 1"))
+        var turns = (0..<15).map { GoDeeper.Turn(fromReader: $0 % 2 == 0, text: "\($0)") }
+        XCTAssertEqual(GoDeeper.window(turns).first?.text, "4")   // 12 would start on an answer; drop it
+        turns.removeLast()
+        XCTAssertEqual(GoDeeper.window(turns).count, 12)
+        XCTAssertTrue(GoDeeper.system(profile: "Reader: Joe.", cardText: "CARD").contains("\"\"\"\nCARD\n\"\"\""))
     }
 }
