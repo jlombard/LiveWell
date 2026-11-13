@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import SurfCore
+import LiveWellCore
 
 /// Dark, monochrome, one ocean-blue accent used only for "met" and "moving".
 enum Theme {

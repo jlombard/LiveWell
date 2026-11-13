@@ -1,6 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
-import SurfCore
+import LiveWellCore
 
 /// Settings behind the gear on Today: the folder, Health, the plan as configuration, and sync status.
 struct SettingsView: View {

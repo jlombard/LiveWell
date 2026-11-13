@@ -1,4 +1,6 @@
-# Surf at 60 — iOS app, Phase 1
+# LiveWell — iOS app, Phase 1
+
+The app behind the Surf at 60 goal. "Surf at 60" is the goal configured in it; LiveWell is the app.
 
 Phase 1 of the build spec: HealthKit sync that writes the Mac's CSV files, the check-in,
 the lock-screen widget and the Today dashboard. Built to the UX concepts canvas and the
@@ -14,7 +16,7 @@ fixes on the Mac. See "First session on the Mac" below.
 
 | Path | What it is |
 | --- | --- |
-| `Packages/SurfCore` | Pure Swift, no Apple frameworks. File formats, `checkins.csv` editing, habit counting, `data.json` decoding, widget line, reveal wording, the plan as configuration. Has the tests. |
+| `Packages/LiveWellCore` | Pure Swift, no Apple frameworks. File formats, `checkins.csv` editing, habit counting, `data.json` decoding, widget line, reveal wording, the plan as configuration. Has the tests. |
 | `App/Health/HealthSync.swift` | Observer queries with background delivery, anchored queries (adds, edits, deletions by HealthKit UUID), Exercise minutes, sleep, tap-to-log workouts. |
 | `App/Files/HealthGlanceFolder.swift` | The folder bookmark; every read and write through `NSFileCoordinator`; watches `data.json`. |
 | `App/Store` | SwiftData models and `AppModel`, the sync pipeline: Health → store → CSV files → `data.json` → widget. |
@@ -26,11 +28,11 @@ fixes on the Mac. See "First session on the Mac" below.
 
 1. Set the three `CHANGE` values in `project.yml` (Team ID, bundle ids, App Group id; the
    App Group id also lives in `Shared/AppGroup.swift`).
-2. `brew install xcodegen`, then `xcodegen` in this folder, and open `SurfAt60.xcodeproj`.
+2. `brew install xcodegen`, then `xcodegen` in this folder, and open `LiveWell.xcodeproj`.
 3. Build. Fix whatever the compiler finds (this code has not met the iOS SDK yet).
 4. **Match the file formats before trusting any output.** Read `engine/build.py` and the
    current files in `health/`, then correct `ExportFormats` in
-   `Packages/SurfCore/Sources/SurfCore/ExportFiles.swift` and update the tests. Only the
+   `Packages/LiveWellCore/Sources/LiveWellCore/ExportFiles.swift` and update the tests. Only the
    `workouts.csv` row format (`2026-10-15 20:29,yoga,21`) is confirmed. These are guesses:
    - whether any file has a header row (assumed none; `checkins.csv` is assumed to have one)
    - `exercise_minutes.csv` as `date,minutes`, only days with data, last 35 days
@@ -74,5 +76,5 @@ and StandBy widgets; the biweekly plan review; an app icon.
 ## Running the core tests
 
 ```bash
-cd Packages/SurfCore && swift test
+cd Packages/LiveWellCore && swift test
 ```

@@ -1,7 +1,7 @@
 import Foundation
 import HealthKit
 import SwiftData
-import SurfCore
+import LiveWellCore
 
 /// Reads Apple Health into the app's store. Workouts, VO2 max and weight are fetched
 /// incrementally by anchor (adds, edits and deletions); Exercise minutes and sleep are re-read

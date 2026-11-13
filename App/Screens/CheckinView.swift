@@ -2,7 +2,7 @@ import SwiftUI
 import PhotosUI
 import AudioToolbox
 import UIKit
-import SurfCore
+import LiveWellCore
 
 /// Check-in: a hub, not a march. The goal leads; each measurement can be done any day this week.
 struct CheckinView: View {

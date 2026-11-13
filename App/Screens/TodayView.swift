@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import SurfCore
+import LiveWellCore
 
 /// Today: the one line for the day, five habit tiles (tap to log), five progress bars.
 struct TodayView: View {

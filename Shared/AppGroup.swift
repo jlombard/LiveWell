@@ -1,10 +1,10 @@
 import Foundation
-import SurfCore
+import LiveWellCore
 
 /// The container the app and the widget share. The id must match both .entitlements files
 /// (set in project.yml).
 enum AppGroup {
-    static let id = "group.surfat60.shared"
+    static let id = "group.livewell.shared"
 
     static var container: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)
@@ -32,8 +32,8 @@ enum AppGroup {
 }
 
 enum DeepLink {
-    static let today = URL(string: "surfat60://today")!
-    static let checkin = URL(string: "surfat60://checkin")!
+    static let today = URL(string: "livewell://today")!
+    static let checkin = URL(string: "livewell://checkin")!
 }
 
 /// SF Symbols for the five habits, shared by the app and the widget.

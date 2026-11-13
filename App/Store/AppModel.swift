@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 import UserNotifications
 import WidgetKit
-import SurfCore
+import LiveWellCore
 
 enum AppTab: Hashable { case today, report, checkin }
 
@@ -40,7 +40,7 @@ struct LoggedNote: Equatable {
 @MainActor
 @Observable
 final class AppModel {
-    static let refreshTaskID = "surfat60.refresh"
+    static let refreshTaskID = "livewell.refresh"
 
     let container: ModelContainer
     let health = HealthSync()

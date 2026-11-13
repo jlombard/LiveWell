@@ -1,6 +1,6 @@
-# Generates SurfAt60.xcodeproj. Run `xcodegen` in this folder after changing this file.
+# Generates LiveWell.xcodeproj. Run `xcodegen` in this folder after changing this file.
 # Before the first build, set the three values marked CHANGE.
-name: SurfAt60
+name: LiveWell
 options:
   deploymentTarget:
     iOS: "17.0"
@@ -14,56 +14,56 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     TARGETED_DEVICE_FAMILY: "1"
 packages:
-  SurfCore:
-    path: Packages/SurfCore
+  LiveWellCore:
+    path: Packages/LiveWellCore
 targets:
-  SurfAt60:
+  LiveWell:
     type: application
     platform: iOS
     sources: [App, Shared]
     dependencies:
-      - package: SurfCore
-      - target: SurfAt60Widget
+      - package: LiveWellCore
+      - target: LiveWellWidget
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.surfat60          # CHANGE
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.livewell          # CHANGE
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: Surf at 60
+        CFBundleDisplayName: LiveWell
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIAppFonts: [InstrumentSerif-Regular.ttf, InstrumentSerif-Italic.ttf]
         UIBackgroundModes: [fetch, processing]
-        BGTaskSchedulerPermittedIdentifiers: [surfat60.refresh]
-        NSHealthShareUsageDescription: Surf at 60 reads your workouts, Exercise minutes, VO2 max, weight and sleep to keep your dashboard current.
-        NSHealthUpdateUsageDescription: Surf at 60 saves a workout to Health when you log a lift, row or yoga session by hand.
+        BGTaskSchedulerPermittedIdentifiers: [livewell.refresh]
+        NSHealthShareUsageDescription: LiveWell reads your workouts, Exercise minutes, VO2 max, weight and sleep to keep your dashboard current.
+        NSHealthUpdateUsageDescription: LiveWell saves a workout to Health when you log a lift, row or yoga session by hand.
         CFBundleURLTypes:
-          - CFBundleURLName: surfat60
-            CFBundleURLSchemes: [surfat60]
+          - CFBundleURLName: livewell
+            CFBundleURLSchemes: [livewell]
     entitlements:
-      path: App/SurfAt60.entitlements
+      path: App/LiveWell.entitlements
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
         com.apple.developer.healthkit.background-delivery: true
-        com.apple.security.application-groups: [group.surfat60.shared]   # CHANGE with Shared/AppGroup.swift
-  SurfAt60Widget:
+        com.apple.security.application-groups: [group.livewell.shared]   # CHANGE with Shared/AppGroup.swift
+  LiveWellWidget:
     type: app-extension
     platform: iOS
     sources: [Widget, Shared]
     dependencies:
-      - package: SurfCore
+      - package: LiveWellCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.surfat60.widget   # CHANGE (app id + .widget)
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.livewell.widget   # CHANGE (app id + .widget)
     info:
       path: Widget/Info.plist
       properties:
-        CFBundleDisplayName: Surf at 60
+        CFBundleDisplayName: LiveWell
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
-      path: Widget/SurfAt60Widget.entitlements
+      path: Widget/LiveWellWidget.entitlements
       properties:
-        com.apple.security.application-groups: [group.surfat60.shared]
+        com.apple.security.application-groups: [group.livewell.shared]

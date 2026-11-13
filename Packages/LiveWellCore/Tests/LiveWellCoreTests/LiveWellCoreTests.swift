@@ -1,7 +1,7 @@
 import XCTest
-@testable import SurfCore
+@testable import LiveWellCore
 
-final class SurfCoreTests: XCTestCase {
+final class LiveWellCoreTests: XCTestCase {
     let tz = TimeZone(identifier: "America/New_York")!
     var cal: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone = tz; return c }
 

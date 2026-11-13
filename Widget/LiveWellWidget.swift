@@ -1,6 +1,6 @@
 import WidgetKit
 import SwiftUI
-import SurfCore
+import LiveWellCore
 
 struct SurfEntry: TimelineEntry {
     let date: Date
@@ -67,7 +67,7 @@ struct CircularView: View {
     }
 }
 
-struct SurfWidgetView: View {
+struct LiveWellWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: SurfEntry
 
@@ -84,12 +84,12 @@ struct SurfWidgetView: View {
 }
 
 @main
-struct SurfWidget: Widget {
+struct LiveWellWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "SurfAt60Widget", provider: SurfProvider()) { entry in
-            SurfWidgetView(entry: entry)
+        StaticConfiguration(kind: "LiveWellWidget", provider: SurfProvider()) { entry in
+            LiveWellWidgetView(entry: entry)
         }
-        .configurationDisplayName("Surf at 60")
+        .configurationDisplayName("LiveWell")
         .description("Today\u{2019}s one thing, and your five habits.")
         .supportedFamilies([.accessoryRectangular, .accessoryCircular])
     }

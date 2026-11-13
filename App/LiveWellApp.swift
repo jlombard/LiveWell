@@ -5,7 +5,7 @@ import UserNotifications
 import UIKit
 
 @main
-struct SurfAt60App: App {
+struct LiveWellApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppDelegate.model
