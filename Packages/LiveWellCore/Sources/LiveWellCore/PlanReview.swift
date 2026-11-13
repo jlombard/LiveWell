@@ -11,11 +11,17 @@ public enum PlanReview {
         /// The earlier week, then the latest week. Nil = not measured that week.
         public var weeks: [Double?]
         public var pillars: [String]
-        public init(key: String, name: String, goal: Double, weeks: [Double?], pillars: [String]) {
-            self.key = key; self.name = name; self.goal = goal; self.weeks = weeks; self.pillars = pillars
+        /// A note for each week whose target was changed by that week's commitment
+        /// ("0 planned, Vacation"); nil for a usual week.
+        public var planned: [String?]
+        public init(key: String, name: String, goal: Double, weeks: [Double?], pillars: [String], planned: [String?] = [nil, nil]) {
+            self.key = key; self.name = name; self.goal = goal; self.weeks = weeks; self.pillars = pillars; self.planned = planned
         }
-        var metBoth: Bool { weeks.count == 2 && weeks.allSatisfy { ($0 ?? -1) >= goal } }
-        var missedBoth: Bool { weeks.count == 2 && weeks.allSatisfy { $0 != nil && $0! < goal } }
+        /// A week with a changed target was planned that way: it is never a miss, and it isn't
+        /// evidence for a permanent change either.
+        var hasPlannedWeek: Bool { planned.contains { $0 != nil } }
+        var metBoth: Bool { !hasPlannedWeek && weeks.count == 2 && weeks.allSatisfy { ($0 ?? -1) >= goal } }
+        var missedBoth: Bool { !hasPlannedWeek && weeks.count == 2 && weeks.allSatisfy { $0 != nil && $0! < goal } }
     }
 
     public enum Trend: String, Codable, Sendable { case up, flat, down, unknown }
@@ -119,6 +125,9 @@ public enum PlanReview {
                             reason: "\(pillar.label) is at \(n(pillar.to)), past the goal of \(n(goal)).")
         }
         let moving = pillars.filter { $0.trend == .up }.map(\.label)
+        if habits.contains(where: \.hasPlannedWeek), moving.isEmpty {
+            return .stay("One of these weeks was planned differently, so there isn't a fair pattern to act on yet.")
+        }
         return .stay(moving.isEmpty ? "Nothing in the last two weeks calls for a change."
                                     : "\(moving.joined(separator: ", ")) \(moving.count == 1 ? "is" : "are") moving. The plan is working; keep it.")
     }

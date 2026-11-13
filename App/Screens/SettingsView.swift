@@ -10,6 +10,9 @@ struct SettingsView: View {
     @State private var newActivity = ""
     @State private var keyDraft = ""
     @State private var hasKey = Keychain.apiKey != nil
+    @State private var pickingHoldings = false
+    @State private var finnhubDraft = ""
+    @State private var hasFinnhub = Keychain.finnhubKey != nil
 
     var body: some View {
         @Bindable var model = model
@@ -49,6 +52,37 @@ struct SettingsView: View {
                     }
                 } header: { Text("Go deeper chat") } footer: {
                     Text("Questions you ask on a Surf Report card go from this phone straight to Anthropic, billed to your API account. The key is kept in the iOS Keychain and never written to the Health Glance folder.")
+                }
+
+                Section {
+                    LabeledContent("Holdings", value: model.wealth.holdings.isEmpty ? "None imported"
+                                   : "\(model.wealth.holdings.count) · \(model.wealth.importedOn.map(shortDay) ?? "")")
+                    Button(model.wealth.holdings.isEmpty ? "Import holdings CSV" : "Import a newer CSV") { pickingHoldings = true }
+                    if hasFinnhub {
+                        LabeledContent("Finnhub key", value: "Saved on this phone")
+                        Button("Remove key", role: .destructive) { Keychain.finnhubKey = nil; hasFinnhub = false }
+                    } else {
+                        SecureField("Finnhub API key", text: $finnhubDraft).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        Button("Save key") {
+                            Keychain.finnhubKey = finnhubDraft; finnhubDraft = ""; hasFinnhub = Keychain.finnhubKey != nil
+                            Task { await model.wealth.refresh(force: true) }
+                        }
+                        .disabled(finnhubDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    Toggle("Show the day, not the week", isOn: $model.settings.wealthDaily)
+                    if hasFinnhub, !model.wealth.holdings.isEmpty {
+                        Button(model.wealth.isRefreshing ? "Checking\u{2026}" : "Check prices now") { Task { await model.wealth.refresh(force: true) } }
+                            .disabled(model.wealth.isRefreshing)
+                    }
+                    if !model.wealth.holdings.isEmpty {
+                        Button("Remove holdings and prices", role: .destructive) { model.wealth.clear() }
+                    }
+                } header: { Text("Wealth") } footer: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Export positions from your brokerage as a CSV and import it here, or share the file to LiveWell. Only the ticker, shares, cost basis and security name are kept, on this phone. The Health Glance folder gets each holding\u{2019}s share of the account in percent, never share counts or dollar amounts.")
+                        if let day = model.wealth.book.latestDay { Text("Closing prices through \(shortDay(day)). Checked once after each US close.") }
+                        if let note = model.wealth.note { Text(note).foregroundStyle(.orange) }
+                    }
                 }
 
                 Section {
@@ -129,6 +163,12 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .background {
+                // A second importer has to hang off a different view than the folder picker.
+                Color.clear.fileImporter(isPresented: $pickingHoldings, allowedContentTypes: [.commaSeparatedText, .plainText]) { result in
+                    if case .success(let url) = result { model.importHoldings(from: url) }
+                }
+            }
             .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
                 if case .success(let url) = result { model.linkFolder(url) }
             }

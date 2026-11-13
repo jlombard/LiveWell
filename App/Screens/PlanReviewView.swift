@@ -38,8 +38,9 @@ struct PlanReviewView: View {
         HStack {
             Text(habit.name).font(.body.weight(.semibold)).foregroundStyle(Theme.text)
             Spacer()
-            ForEach(Array(habit.weeks.enumerated()), id: \.offset) { _, value in
-                let met = (value ?? -1) >= habit.goal
+            ForEach(Array(habit.weeks.enumerated()), id: \.offset) { index, value in
+                // A week with a changed target was planned that way: shown plainly, never as a miss.
+                let met = habit.planned[index] == nil && (value ?? -1) >= habit.goal
                 Text(value.map(formatValue) ?? "\u{2013}")
                     .font(.body.monospacedDigit().weight(met ? .semibold : .regular))
                     .foregroundStyle(met ? Theme.accent : Theme.text)
@@ -48,6 +49,11 @@ struct PlanReviewView: View {
             Text("of \(formatValue(habit.goal))").font(.footnote).foregroundStyle(Theme.secondary).frame(width: 56, alignment: .trailing)
         }
         .frame(minHeight: 44)
+        .overlay(alignment: .bottomLeading) {
+            if let note = habit.planned.compactMap({ $0 }).first {
+                Text(note).font(.caption2).foregroundStyle(Theme.secondary).padding(.bottom, 3)
+            }
+        }
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(habit.name): \(habit.weeks.map { $0.map(formatValue) ?? "not measured" }.joined(separator: ", then ")), goal \(formatValue(habit.goal))")

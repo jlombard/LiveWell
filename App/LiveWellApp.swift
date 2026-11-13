@@ -3,6 +3,7 @@ import SwiftData
 import BackgroundTasks
 import UserNotifications
 import UIKit
+import LiveWellCore
 
 @main
 struct LiveWellApp: App {
@@ -33,17 +34,19 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     #if DEBUG && targetEnvironment(simulator)
     @State private var demoReview = UserDefaults.standard.bool(forKey: "demoReview")
+    @State private var demoClose = UserDefaults.standard.integer(forKey: "demoClose") > 0
     #endif
 
     var body: some View {
         @Bindable var model = model
         TabView(selection: $model.tab) {
-            TodayView()
-                .tabItem { Label("Today", systemImage: "sun.horizon") }.tag(AppTab.today)
-            ReportView()
-                .tabItem { Label("Report", systemImage: "newspaper") }.tag(AppTab.report)
-            CheckinView()
-                .tabItem { Label("Check-in", systemImage: "ruler") }.tag(AppTab.checkin)
+            tab(.today) { FrontPageView() }
+                .tabItem { Label("Today", systemImage: "newspaper") }.tag(AppTab.today)
+            tab(.sections) { SectionsView() }
+                .tabItem { Label("Sections", systemImage: "square.grid.2x2") }.tag(AppTab.sections)
+            tab(.rituals) { RitualsView() }
+                .tabItem { Label("Rituals", systemImage: "checkmark.circle") }.tag(AppTab.rituals)
+                .badge(model.rituals.filter { $0.when == .dueNow }.count)
         }
         .toolbarBackground(Theme.bg, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
@@ -52,7 +55,36 @@ struct RootView: View {
         .fullScreenCover(isPresented: $demoReview) {
             ZStack { Theme.bg.ignoresSafeArea(); PlanReviewView { demoReview = false } }.preferredColorScheme(.dark)
         }
+        // `-demoClose 1` opens "Commit to the week".
+        .fullScreenCover(isPresented: $demoClose) { CloseWeekView() }
         #endif
+    }
+}
+
+extension RootView {
+    /// One tab: its root screen in a navigation stack that can push section homes, editions,
+    /// the check-in and the library.
+    func tab<Root: View>(_ which: AppTab, @ViewBuilder root: () -> Root) -> some View {
+        NavigationStack(path: Binding(get: { model.paths[which] ?? [] }, set: { model.paths[which] = $0 })) {
+            root()
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(for: Route.self) { route in
+                    Group {
+                        switch route {
+                        case .section(let key):
+                            if key == Wealth.sectionKey { WealthBoardView() } else { TodayView() }   // Health's home is its dashboard
+                        case .issue(let key): ReportView(sectionKey: key)
+                        case .checkin: CheckinView()
+                        case .library: LibraryView()
+                        case .holding(let ticker): HoldingView(ticker: ticker)
+                        case .ask(let section, let ticker): AskView(section: section, ticker: ticker)
+                        }
+                    }
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(Theme.bg, for: .navigationBar)
+                }
+        }
+        .tint(Theme.text)
     }
 }
 

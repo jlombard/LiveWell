@@ -14,6 +14,15 @@ final class ReportStore {
 
     private(set) var issues: [String: ReportIssue] = [:]
     private(set) var archive = ReportArchive()
+    /// The other sections' editions (Build Wealth), by section key. Each has its own folder.
+    struct Edition: Equatable { var issues: [String: ReportIssue] = [:]; var archive = ReportArchive()
+        var latest: ReportIssue? { archive.issues.first.flatMap { issues[$0.date] } } }
+    private(set) var others: [String: Edition] = [:]
+    /// Set by AppModel: section key → issues folder, for every section with an edition besides Health.
+    var otherFolders: () -> [String: String] = { [:] }
+
+    /// A section's edition; Health's (or an unknown key's) is the original one.
+    func edition(_ section: String) -> Edition { others[section] ?? Edition(issues: issues, archive: archive) }
     private(set) var hasLoaded = false
     private(set) var plan = PlanDaysFile()
     private(set) var votes: [String: CardVote] = [:]
@@ -24,7 +33,7 @@ final class ReportStore {
     var trialMode: () -> Bool = { true }
     var onPlanChange: () -> Void = {}
     /// Called once for each issue newer than any seen before (not on the very first load).
-    var onNewIssue: (ReportIssue) -> Void = { _ in }
+    var onNewIssue: (ReportIssue, String?) -> Void = { _, _ in }
     private static let lastIssueKey = "lastIssueSeen"
 
     init(folder: HealthGlanceFolder) { self.folder = folder }
@@ -45,13 +54,17 @@ final class ReportStore {
         repeat {
             loadAgain = false
             let known = cache, trial = trialMode(), live = livePlanPath, appPlan = planPath
+            let folders = [("", "newsletter/issues")] + otherFolders().map { ($0.key, $0.value) }
             let loaded = await Task.detached(priority: .userInitiated) { () -> Loaded in
                 let reader = FolderReader(root: root)
                 var out = Loaded()
-                for file in reader.list("newsletter/issues") where file.name.hasSuffix(".json") {
-                    if let hit = known[file.name], hit.modified == file.modified { out.cache[file.name] = hit; continue }
-                    if let data = try? reader.read("newsletter/issues/" + file.name), let issue = try? ReportIssue.decode(data) {
-                        out.cache[file.name] = (file.modified, issue)
+                for (section, folder) in folders {
+                    for file in reader.list(folder) where file.name.hasSuffix(".json") {
+                        let key = folder + "/" + file.name
+                        if let hit = known[key], hit.modified == file.modified { out.cache[key] = hit; out.sections[key] = section; continue }
+                        if let data = try? reader.read(key), let issue = try? ReportIssue.decode(data) {
+                            out.cache[key] = (file.modified, issue); out.sections[key] = section
+                        }
                     }
                 }
                 out.plan = PlanDaysFile(text: reader.text(live) ?? "")
@@ -65,13 +78,25 @@ final class ReportStore {
                 return out
             }.value
             cache = loaded.cache
-            let all = loaded.cache.values.map(\.issue)
-            let byDate = Dictionary(all.map { ($0.date, $0) }) { a, _ in a }
+            func dated(_ section: String) -> [String: ReportIssue] {
+                let all = loaded.cache.filter { loaded.sections[$0.key] == section }.values.map(\.issue)
+                return Dictionary(all.map { ($0.date, $0) }) { a, _ in a }
+            }
+            let byDate = dated("")
             if byDate != issues { issues = byDate; archive = ReportArchive(issues: Array(byDate.values)) }
-            if let newest = latest {
-                let seen = UserDefaults.standard.string(forKey: Self.lastIssueKey)
-                if newest.date != seen { UserDefaults.standard.set(newest.date, forKey: Self.lastIssueKey) }
-                if let seen, newest.date > seen { onNewIssue(newest) }
+            var rest: [String: Edition] = [:]
+            for (section, _) in folders where !section.isEmpty {
+                let found = dated(section)
+                if !found.isEmpty { rest[section] = Edition(issues: found, archive: ReportArchive(issues: Array(found.values))) }
+            }
+            if rest != others { others = rest }
+            // A newer issue than any seen before, per section (never on the very first load).
+            for (section, newest) in [("", latest)] + rest.map({ ($0.key, $0.value.latest) }) {
+                guard let newest else { continue }
+                let key = section.isEmpty ? Self.lastIssueKey : Self.lastIssueKey + "." + section
+                let seen = UserDefaults.standard.string(forKey: key)
+                if newest.date != seen { UserDefaults.standard.set(newest.date, forKey: key) }
+                if let seen, newest.date > seen { onNewIssue(newest, section.isEmpty ? nil : section) }
             }
             if loaded.votes != votes { votes = loaded.votes }
             if loaded.saved != saved { saved = loaded.saved }
@@ -83,6 +108,8 @@ final class ReportStore {
 
     private struct Loaded: Sendable {
         var cache: [String: (modified: Date, issue: ReportIssue)] = [:]
+        /// cache key → section key ("" = Health)
+        var sections: [String: String] = [:]
         var plan = PlanDaysFile()
         var votes: [String: CardVote] = [:]
         var saved: [SavedAnswer] = []

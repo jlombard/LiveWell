@@ -172,13 +172,31 @@ public struct ReportCard: Decodable, Equatable, Identifiable, Sendable {
     public var starters: [String]
     /// The section this card belongs to (nil = the issue's section).
     public var section: String?
+    /// Wealth: which lens the card looks through ("P1"…"P8", "V", or a lens name).
+    public var playbook: String?
+    /// Wealth: the company the card is about, and whether it is "owned" or "watching".
+    public var holding: String?
+    public var status: String?
+    /// "Name the company": a playable puzzle in place of a story.
+    public var puzzle: Puzzle?
+    /// "Why it moved" leads with a verdict: "Is why you own it still true?" "Yes."
+    public var verdict: Verdict?
+
+    public struct Verdict: Equatable, Sendable { public var question: String; public var answer: String }
+
+    /// The lens in the app's everyday words ("Supply chain"), whatever form the issue used.
+    public var lensName: String? {
+        guard let playbook, !playbook.isEmpty else { return nil }
+        let p = playbook.trimmingCharacters(in: .whitespaces)
+        return (Lens.all.first { $0.tag.lowercased() == p.lowercased() || $0.key == p.lowercased() || $0.name.lowercased() == p.lowercased() })?.name ?? p
+    }
 
     enum Keys: String, CodingKey {
         case id, kind, label, title, pillar, tag, win, why, body, bullets, figure, figureAfter
-        case tryIt = "try", sub, source, recipe, lesson, quiz, starters, section
+        case tryIt = "try", sub, source, recipe, lesson, quiz, starters, section, playbook, holding, status, verdict, puzzle
     }
     private enum Inner: String, CodingKey {
-        case label, text, ingredients, steps, copyText, tag, body, source, options, reveal, t, right
+        case label, text, ingredients, steps, copyText, tag, body, source, options, reveal, t, right, question, answer
     }
     private struct RawOption: Decodable {
         var option: Quiz.Option
@@ -205,6 +223,15 @@ public struct ReportCard: Decodable, Equatable, Identifiable, Sendable {
         source = c.lenient(ReportSource.self, .source)
         starters = c.lenient([String].self, .starters) ?? []
         section = c.lenient(String.self, .section).flatMap { $0.isEmpty ? nil : $0.lowercased() }
+        playbook = c.lenient(String.self, .playbook)
+        puzzle = c.lenient(Puzzle.self, .puzzle)
+        holding = c.lenient(String.self, .holding)
+        status = c.lenient(String.self, .status)?.lowercased()
+        if let v = try? c.nestedContainer(keyedBy: Inner.self, forKey: .verdict), let answer = v.lenient(String.self, .answer) {
+            verdict = Verdict(question: v.lenient(String.self, .question) ?? "Is why you own it still true?", answer: answer)
+        } else if let answer = c.lenient(String.self, .verdict) {
+            verdict = Verdict(question: "Is why you own it still true?", answer: answer)
+        }
         if let t = try? c.nestedContainer(keyedBy: Inner.self, forKey: .tryIt), let text = t.lenient(String.self, .text) {
             tryIt = Try(label: t.lenient(String.self, .label) ?? "Try it", text: text)
         }
@@ -233,6 +260,7 @@ public struct ReportCard: Decodable, Equatable, Identifiable, Sendable {
     /// The card as plain text, for the Go deeper chat (figures and buttons left out).
     public var plainText: String {
         var parts: [String] = [[label, pillar, tag].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")]
+        if let verdict { parts.append("\(verdict.question) \(verdict.answer)") }
         parts.append(RichText.plain(title))
         if let why { parts.append(RichText.plain(why)) }
         parts += body.map(RichText.plain)

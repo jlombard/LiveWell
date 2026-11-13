@@ -28,7 +28,8 @@ enum ClaudeClient {
     }
 
     /// Streams an answer. `onText` gets the whole answer so far each time more arrives.
-    static func ask(model: String, system: String, turns: [GoDeeper.Turn],
+    /// - webSearch: let Claude search the web during the answer (Ask Wealth reads filings this way).
+    static func ask(model: String, system: String, turns: [GoDeeper.Turn], webSearch: Bool = false,
                     onText: @escaping @MainActor (String) -> Void) async throws -> Answer {
         guard let key = Keychain.apiKey, !key.isEmpty else { throw Failure.noKey }
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
@@ -50,6 +51,11 @@ enum ClaudeClient {
         if !model.contains("haiku") {
             request.setValue("server-side-fallback-2026-07-01", forHTTPHeaderField: "anthropic-beta")
             body["fallbacks"] = "default"
+        }
+        if webSearch {
+            // Anthropic runs the search; results come back inside the same streamed answer.
+            body["tools"] = [["type": "web_search_20260209", "name": "web_search", "max_uses": 5]]
+            request.timeoutInterval = 300
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -84,7 +90,8 @@ enum ClaudeClient {
         }
         if stop == "refusal" && text.isEmpty { throw Failure.refused }
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw Failure.empty }
-        return Answer(text: text, truncated: stop == "max_tokens")
+        // "pause_turn": a long search turn stopped part-way; what arrived is kept and he can ask it to go on.
+        return Answer(text: text, truncated: stop == "max_tokens" || stop == "pause_turn")
     }
 
     private static func failure(status: Int, body: Data) -> Failure {
@@ -107,31 +114,42 @@ enum ClaudeClient {
     }
 }
 
-/// The API key lives in the iOS Keychain, on this device only. It is never written to the
+/// API keys live in the iOS Keychain, on this device only. They are never written to the
 /// Health Glance folder or to the app's settings files.
 enum Keychain {
-    private static let query: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrService as String: "ink.boundless.livewell.anthropic",
-        kSecAttrAccount as String: "api-key",
-    ]
+    private static func query(_ account: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: account == "api-key" ? "ink.boundless.livewell.anthropic" : "ink.boundless.livewell.\(account)",
+         kSecAttrAccount as String: account]
+    }
 
+    static func value(_ account: String) -> String? {
+        var q = query(account)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func set(_ account: String, _ newValue: String?) {
+        SecItemDelete(query(account) as CFDictionary)
+        guard let value = newValue?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return }
+        var q = query(account)
+        q[kSecValueData as String] = Data(value.utf8)
+        q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly   // background refresh needs it while locked
+        SecItemAdd(q as CFDictionary, nil)
+    }
+
+    /// The Anthropic key for Go deeper.
     static var apiKey: String? {
-        get {
-            var q = query
-            q[kSecReturnData as String] = true
-            q[kSecMatchLimit as String] = kSecMatchLimitOne
-            var item: CFTypeRef?
-            guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
-            return String(data: data, encoding: .utf8)
-        }
-        set {
-            SecItemDelete(query as CFDictionary)
-            guard let value = newValue?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return }
-            var q = query
-            q[kSecValueData as String] = Data(value.utf8)
-            q[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-            SecItemAdd(q as CFDictionary, nil)
-        }
+        get { value("api-key") }
+        set { set("api-key", newValue) }
+    }
+
+    /// The Finnhub key for daily closing prices.
+    static var finnhubKey: String? {
+        get { value("finnhub") }
+        set { set("finnhub", newValue) }
     }
 }

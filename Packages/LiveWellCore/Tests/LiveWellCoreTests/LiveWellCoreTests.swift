@@ -536,4 +536,379 @@ final class LiveWellCoreTests: XCTestCase {
         XCTAssertEqual(power, text.replacingOccurrences(of: "\"goal\": 10,", with: "\"goal\": 15,"))
         XCTAssertNil(JSONText.setting(1, at: ["habits_last_7_days", "swim", "goal"], in: text))
     }
+
+    // MARK: weekly commitment overrides
+
+    func testCommitDefaultsToUsualGoalsAndKeepsOverrides() {
+        let habits = SurfConfig.default.habits
+        let records = Commitments.commit([], today: "2026-11-16", habits: habits,
+                                         targets: ["row": HabitCommitment(target: 0, usual: 2, reason: "Vacation"),
+                                                   "lift": HabitCommitment(target: 2, usual: 2, reason: "Other")])
+        let week = records[0]
+        XCTAssertEqual([week.week_start, week.week_end], ["2026-11-16", "2026-11-22"])
+        XCTAssertEqual(week.habits["row"], HabitCommitment(target: 0, usual: 2, reason: "Vacation"))
+        XCTAssertEqual(week.habits["lift"], HabitCommitment(target: 2, usual: 2))     // unchanged rows carry no reason
+        XCTAssertEqual(week.habits.count, 5)
+        XCTAssertTrue(week.isLighter)
+        XCTAssertEqual(Commitments.rowText(week.habits["row"]!, habit: habits[1]), "Off this week · Vacation")
+        XCTAssertEqual(Commitments.rowText(HabitCommitment(target: 1, usual: 2), habit: habits[1]), "1 this week · usually 2")
+        XCTAssertEqual(Commitments.rowText(HabitCommitment(target: 300, usual: 250), habit: habits[3]), "300 minutes this week · usually 250")
+        XCTAssertNil(Commitments.rowText(week.habits["lift"]!, habit: habits[0]))
+        XCTAssertEqual(Commitments.closingLine(week), "A lighter week, still pointed at the water.")
+        XCTAssertEqual(Commitments.comeBack(week, habits: habits), ["Row is back on Monday the 23rd."])
+        let usual = Commitments.commit([], today: "2026-11-16", habits: habits, targets: [:])[0]
+        XCTAssertEqual(Commitments.closingLine(usual), "Five habits. One goal.")
+        XCTAssertEqual(Commitments.comeBack(usual, habits: habits), [])
+        // The file shape the Mac reads.
+        XCTAssertTrue(AppFiles.json(records).contains("\"week_end\" : \"2026-11-22\""))
+    }
+
+    func testStepsAndLimits() {
+        let h = SurfConfig.default.habits
+        XCTAssertEqual(Commitments.stepped(2, by: -1, habit: h[1]), 1)
+        XCTAssertEqual(Commitments.stepped(0, by: -1, habit: h[1]), 0)        // never below 0
+        XCTAssertEqual(Commitments.stepped(250, by: 1, habit: h[3]), 275)     // active minutes by 25
+        XCTAssertEqual(Commitments.stepped(7, by: 1, habit: h[4]), 7)         // plan days stop at 7
+        XCTAssertEqual(Commitments.ordinal(1), "1st"); XCTAssertEqual(Commitments.ordinal(12), "12th"); XCTAssertEqual(Commitments.ordinal(22), "22nd")
+    }
+
+    func testMidWeekChangeRunsToTheSameWeekEnd() {
+        let habits = SurfConfig.default.habits
+        var records = Commitments.commit([], today: "2026-11-16", habits: habits, targets: [:])
+        records = Commitments.change(records, today: "2026-11-19", habits: habits, key: "row", target: 0, reason: "Travel")
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(Commitments.active(records, on: "2026-11-18")?.habits["row"]?.target, 2)   // before the change
+        let now = Commitments.active(records, on: "2026-11-20")
+        XCTAssertEqual([now?.week_start, now?.week_end], ["2026-11-19", "2026-11-22"])
+        XCTAssertEqual(now?.habits["row"]?.reason, "Travel")
+        XCTAssertNil(Commitments.active(records, on: "2026-11-23"))                               // usual goals return on their own
+        // A second change the same day replaces the first; with no week in force, one starts today.
+        records = Commitments.change(records, today: "2026-11-19", habits: habits, key: "row", target: 1, reason: nil)
+        XCTAssertEqual(records.count, 2)
+        let fresh = Commitments.change([], today: "2026-12-01", habits: habits, key: "yoga", target: 0, reason: "Rest or recovery")
+        XCTAssertEqual(fresh[0].week_end, "2026-12-07")
+    }
+
+    func testOffHabitIsNeitherMetNorMissedAndLeavesTheWidget() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+        let habits = SurfConfig.default.habits
+        let week = Commitments.commit([], today: "2026-11-16", habits: habits,
+                                      targets: ["row": HabitCommitment(target: 0, usual: 2, reason: "Vacation"),
+                                                "yoga": HabitCommitment(target: 1, usual: 3)])[0]
+        let now = at(2026, 11, 18, 9)
+        let rows = [WorkoutRow(start: at(2026, 11, 17, 8), type: "yoga", minutes: 20)]
+        let s = HabitCounter.statuses(config: .default, workouts: rows, exerciseMinutes: [DatedValue(date: at(2026, 11, 17), value: 300)],
+                                      mac: nil, planDays: 5, commitment: week, now: now, calendar: cal)
+        let row = s.first { $0.key == "row" }!, yoga = s.first { $0.key == "yoga" }!
+        XCTAssertTrue(row.isOff); XCTAssertFalse(row.met)
+        XCTAssertEqual(row.reason, "Vacation")
+        XCTAssertTrue(yoga.met)                                   // the lowered target lights up when met
+        XCTAssertEqual(yoga.usualGoal, 3)
+        XCTAssertEqual(HabitCounter.furthestBehind(s)?.key, "lift")   // never the off habit
+        let snap = WidgetSnapshot.make(config: .default, statuses: s, mac: nil, todayString: "2026-11-18", now: now, calendar: cal)
+        XCTAssertEqual(snap.icons.map(\.key), ["lift", "yoga", "active", "plan"])
+        XCTAssertEqual(snap.line, "Lift today")
+    }
+
+    func testReviewTreatsAPlannedWeekAsPlanned() {
+        let row = PlanReview.HabitWeeks(key: "row", name: "Row", goal: 2, weeks: [0, 1], pillars: ["cardio"], planned: ["0 planned, Vacation", nil])
+        let flat = PlanReview.PillarTrend(key: "cardio", label: "Cardio", trend: .down, from: 29.5, to: 29.3, goal: 33)
+        let p = PlanReview.propose(habits: [row], pillars: [flat])
+        XCTAssertFalse(p.isChange)                                // "Row 0 of 0, vacation" is never a miss
+        XCTAssertTrue(p.reason.contains("planned differently"))
+    }
+
+    // MARK: Wealth
+
+    func testHoldingsImportKeepsOnlyTickerSharesCostAndName() {
+        // The shape of a brokerage positions export: account columns, a money-market line, a footer.
+        let csv = """
+        \u{FEFF}Account Number,Account Name,Symbol,Description,Quantity,Last Price,Current Value,Cost Basis Total
+        X12345678,ROLLOVER IRA,AAPL,APPLE INC,120,$228.52,"$27,422.40","$15,300.00"
+        X12345678,ROLLOVER IRA,NVDA,NVIDIA CORPORATION COM,200.5,$140.00,"$28,070.00","$9,100.50"
+        X12345678,ROLLOVER IRA,ASML,ASML HOLDING NV NY REGISTRY SHS,10,$700.00,"$7,000.00","$6,500.00"
+        X12345678,ROLLOVER IRA,GOOGL,ALPHABET INC CAP STK CL A,50,$170.00,"$8,500.00",--
+        X12345678,ROLLOVER IRA,SPAXX**,HELD IN MONEY MARKET,,,"$1,204.11",
+        X99999999,OTHER,AAPL,APPLE INC,30,$228.52,"$6,855.60","$4,000.00"
+        X12345678,ROLLOVER IRA,Pending Activity,,,,$0.00,
+
+        "Date downloaded Nov-13-2026 10:00 a.m ET"
+        """
+        let h = HoldingsCSV.parse(csv)
+        XCTAssertEqual(h.map(\.ticker), ["AAPL", "NVDA", "ASML", "GOOGL"])
+        XCTAssertEqual(h[0].shares, 150)                       // two lots of the same holding add up
+        XCTAssertEqual(h[0].costBasis, 19_300)
+        XCTAssertEqual(h[1].shares, 200.5)
+        XCTAssertNil(h[3].costBasis)
+        XCTAssertEqual(h.map(\.displayName), ["Apple", "Nvidia", "ASML", "Alphabet"])
+        // Nothing but those four fields survives encoding.
+        let json = String(data: try! JSONEncoder().encode(h), encoding: .utf8)!
+        XCTAssertFalse(json.contains("X12345678") || json.contains("ROLLOVER"))
+        XCTAssertEqual(HoldingsCSV.parse("Ticker,Shares\nBRK.B,3\nCASH,--\n").map(\.ticker), ["BRK.B"])
+        XCTAssertEqual(HoldingsCSV.parse("no header here\n1,2,3\n"), [])
+    }
+
+    func testImportReadsTheSecurityIDExport() {
+        // Joe's brokerage: the ticker is in "Security ID", the cost in "Cost", and Currency repeats.
+        let header = "Account Ending in,Short Name,Primary Account Holder,Registration,Security ID,Security Description,Market Value,Currency,Market Value (Foreign),Currency,Quantity,Last Price,Currency,Last Price (Foreign),Currency,Today's G/L ($),Currency,Today's G/L (%),Total G/L ($),Currency,Total G/L (%),Cost,Currency,Cost (Foreign),Currency,% of Total"
+        let rows = [
+            "1234,IRA,SOMEONE,Rollover IRA,AAPL,APPLE INC,\"27,422.40\",USD,,,120,228.52,USD,,,10,USD,0.1,\"12,122.40\",USD,79,\"15,300.00\",USD,,,40",
+            "1234,IRA,SOMEONE,Rollover IRA,ASML,ASML HOLDING NV,\"7,000.00\",USD,,,10,700,USD,,,1,USD,0.1,500,USD,7,\"6,500.00\",USD,,,10",
+            "1234,IRA,SOMEONE,Rollover IRA,990286916,BANK DEPOSIT SWEEP,\"1,204.11\",USD,,,\"1,204.11\",1,USD,,,0,USD,0,0,USD,0,\"1,204.11\",USD,,,2",
+        ]
+        let csv = ([header] + rows).joined(separator: "\n")
+        let h = HoldingsCSV.parse(csv)
+        XCTAssertEqual(h.map(\.ticker), ["AAPL", "ASML"])                  // the cash sweep has a number, not a ticker
+        XCTAssertEqual(h[0].shares, 120); XCTAssertEqual(h[0].costBasis, 15_300)
+        XCTAssertEqual(h.map(\.displayName), ["Apple", "ASML"])
+        // The same file saved tab-separated reads the same.
+        let tabbed = ([header] + rows.map { $0.replacingOccurrences(of: "\"27,422.40\"", with: "27422.40") })
+            .map { CSV.parse($0)[0].joined(separator: "\t") }.joined(separator: "\n")
+        XCTAssertEqual(HoldingsCSV.parse(tabbed).map(\.ticker), ["AAPL", "ASML"])
+        XCTAssertEqual(HoldingsCSV.parse(tabbed)[1].costBasis, 6_500)
+    }
+
+    func testWeekIsMeasuredFromLastWeeksClose() {
+        XCTAssertEqual(Wealth.weekBase("2026-11-13"), "2026-11-06")     // a Friday looks back to the Friday before
+        XCTAssertEqual(Wealth.weekBase("2026-11-09"), "2026-11-06")     // Monday
+        XCTAssertEqual(Wealth.weekBase("2026-11-15"), "2026-11-06")     // Sunday still belongs to the week that ended
+        XCTAssertEqual(Wealth.previousTradingDay("2026-11-09"), "2026-11-06")
+        let holdings = [Holding(ticker: "AAA", shares: 10), Holding(ticker: "BBB", shares: 100)]
+        var book = PriceBook()
+        book.record("AAA", day: "2026-11-06", close: 100); book.record("BBB", day: "2026-11-06", close: 10)
+        book.record("AAA", day: "2026-11-12", close: 110); book.record("BBB", day: "2026-11-12", close: 10)
+        book.record("AAA", day: "2026-11-13", close: 121); book.record("BBB", day: "2026-11-13", close: 9)
+        // 1000 + 1000 then; 1210 + 900 now: +5.5%, weighted by value.
+        let week = Wealth.week(holdings, book, today: "2026-11-13")
+        XCTAssertEqual(week?.percent ?? 0, 5.5, accuracy: 0.001)
+        XCTAssertNil(week?.since)
+        XCTAssertEqual(Wealth.day(holdings, book, today: "2026-11-13") ?? 0, (2110.0 / 2100 - 1) * 100, accuracy: 0.001)
+        XCTAssertEqual(Wealth.percentText(5.52), "+5.5%"); XCTAssertEqual(Wealth.percentText(-0.44), "\u{2212}0.4%"); XCTAssertEqual(Wealth.percentText(0.02), "0.0%")
+        let shares = Wealth.shares(holdings, book, today: "2026-11-13")
+        XCTAssertEqual(shares["AAA"] ?? 0, 1210.0 / 2110, accuracy: 0.0001)
+    }
+
+    func testAFreshInstallMeasuresFromItsFirstCloseAndSaysSo() {
+        let holdings = [Holding(ticker: "AAA", shares: 1)]
+        var book = PriceBook()
+        XCTAssertNil(Wealth.week(holdings, book, today: "2026-11-13")?.percent)
+        book.record("AAA", day: "2026-11-11", close: 100)       // set up on a Wednesday
+        XCTAssertNil(Wealth.week(holdings, book, today: "2026-11-11")?.percent)   // one close is not a change
+        book.record("AAA", day: "2026-11-13", close: 103)
+        let week = Wealth.week(holdings, book, today: "2026-11-13")
+        XCTAssertEqual(week?.percent ?? 0, 3, accuracy: 0.001)
+        XCTAssertEqual(week?.since, "2026-11-11")
+    }
+
+    func testBoardNextAndConcentration() {
+        let holdings = [Holding(ticker: "AAPL", shares: 10, name: "APPLE INC"), Holding(ticker: "ASML", shares: 1, name: "ASML HOLDING NV")]
+        var book = PriceBook()
+        book.record("AAPL", day: "2026-11-13", close: 200); book.record("ASML", day: "2026-11-13", close: 500)
+        var rows = Wealth.board(holdings, book, today: "2026-11-13", written: ["ASML"])
+        XCTAssertEqual(rows.map(\.ticker), ["AAPL", "ASML"])                    // largest share first
+        XCTAssertEqual(rows.map(\.status.pill), ["Write it", "Still true"])
+        XCTAssertEqual(Wealth.next(rows), "Next: write why you own Apple")
+        XCTAssertEqual(Wealth.concentration(rows, limit: 0.4), "Apple is 80% of this account.")
+        XCTAssertNil(Wealth.concentration(rows, limit: 0.9))
+        rows = Wealth.board(holdings, book, today: "2026-11-13", written: ["ASML", "AAPL"])
+        XCTAssertEqual(Wealth.next(rows), "All reasons still true.")
+        // The file for the morning run carries shares of the account, never counts or dollars.
+        let json = AppFiles.json(Wealth.Summary(rows: rows, week: (2.14, nil), pricesAsOf: "2026-11-13", updated: "t"))
+        XCTAssertTrue(json.contains("\"share_pct\" : 80") && json.contains("\"week_pct\" : 2.1"))
+        XCTAssertFalse(json.contains("shares\"") || json.contains("cost"))
+    }
+
+    // MARK: reasons and Ask
+
+    func testFrameworkThesisBecomesReasonsInTheAppsWords() {
+        let md = """
+        ## Active Positions & Thesis Statements
+
+        ### ASML (ASML) — Initiated [Date TBD]
+
+        **Thesis:** ASML will continue to win because they own the only physics-based solution.
+
+        **Key thesis pillars:**
+
+        - A: Only company on earth that can build EUV machines — true monopoly
+        - B: Customers funded R&D and own equity
+
+        **Thesis breaks if:**
+
+        - A fundamentally different approach to computing density emerges
+        - Geopolitical shock isolates ASML from enough customers
+
+        **Key signals to monitor quarterly:**
+
+        1. High-NA EUV adoption pace at TSMC
+        1. China revenue trajectory
+
+        **Valuation note (as of May 2026):**
+
+        - Current price: ~$1,633
+
+        |Horizon|Bear|
+        |3 years|-20%|
+
+        -----
+
+        ## Premortem — How This Framework Can Fail
+
+        1. **Confirmation bias** — something
+        """
+        let all = FrameworkDoc.reasons(in: md, today: "2026-11-13")
+        XCTAssertEqual(all.count, 1)
+        let r = all[0]
+        XCTAssertEqual([r.ticker, r.name, r.source], ["ASML", "ASML", "framework"])
+        XCTAssertEqual(r.belief, "I believe ASML will continue to win because they own the only physics-based solution.")
+        XCTAssertEqual(r.reasons, ["Only company on earth that can build EUV machines — true monopoly", "Customers funded R&D and own equity"])
+        XCTAssertEqual(r.dealBreakers.count, 2)
+        XCTAssertEqual(r.watch, ["High-NA EUV adoption pace at TSMC", "China revenue trajectory"])   // the valuation note isn't a signal
+    }
+
+    func testProposalsAreSplitFromTheReplyAndNeedApproval() {
+        let reply = """
+        Services grew faster than devices again, per the 10-K filed Oct 30, 2026.
+
+        <propose kind="reason">Its customers keep paying more each year without being trapped.</propose>
+        <propose kind="deal-breaker">Services growth falls below hardware growth for four straight quarters.</propose>
+
+        What do you make of the App Store rulings?
+        """
+        let (text, proposals) = Proposals.split(reply)
+        XCTAssertEqual(proposals.map(\.kind), [.reason, .dealBreaker])
+        XCTAssertFalse(text.contains("propose"))
+        XCTAssertTrue(text.hasSuffix("What do you make of the App Store rulings?"))
+        // Mid-stream: an unfinished tag never shows.
+        XCTAssertEqual(Proposals.split("Here is one.\n<propose kind=\"reason\">Its custo").text, "Here is one.")
+        XCTAssertEqual(Proposals.split("Here is one.\n<prop").text, "Here is one.")
+        XCTAssertEqual(Proposals.split("Fewer than < 6 quarters.").text, "Fewer than < 6 quarters.")
+
+        var draft = ReasonsDraft(ticker: "AAPL")
+        XCTAssertFalse(draft.isComplete)
+        draft.approve(.reason, proposals[0].text, lens: "model", id: "1")
+        draft.approve(.reason, proposals[0].text, lens: "model", id: "2")          // the same line twice is one line
+        draft.approve(.dealBreaker, proposals[1].text, lens: "model", id: "3")
+        XCTAssertEqual(draft.missing, "Still needed: an \u{201C}I believe\u{201D} line.")
+        draft.approve(.belief, "I believe Apple will keep winning because of A.", lens: nil, id: "4")
+        draft.approve(.belief, "I believe Apple will keep winning because its customers stay by choice.", lens: nil, id: "5")
+        XCTAssertEqual(draft.lines(.belief).count, 1)                               // one belief; the newer replaces it
+        let saved = draft.reasons(name: "Apple", today: "2026-11-13")
+        XCTAssertEqual(saved?.reasons.count, 1)
+        XCTAssertEqual(saved?.source, "app")
+        XCTAssertEqual(ReasonsDraft(revising: saved!).lines.count, 3)
+    }
+
+    func testAskSpeaksTheAppsLanguageAndNeverAdvisesTrades() {
+        XCTAssertEqual(Lens.all.map(\.name), ["Problem", "Business model", "Users", "Developers", "Supply chain", "Smart money", "Ceiling", "Speed", "Values"])
+        var draft = ReasonsDraft(ticker: "AAPL"); draft.approve(.reason, "Customers stay by choice.", lens: "users", id: "1"); draft.lensesDone = ["problem"]
+        let s = Ask.wealthSystem(holdings: [("Apple", "AAPL", 48, false), ("ASML", "ASML", 14, true)], today: "2026-11-13",
+                                 focus: ("Apple", "AAPL"), lens: Lens.named("supply"), draft: draft, existing: nil)
+        XCTAssertTrue(s.contains("Apple (AAPL) 48%, reasons not written yet; ASML (ASML) 14%"))
+        XCTAssertTrue(s.contains("Current lens: Supply chain."))
+        XCTAssertTrue(s.contains("never buy or sell advice"))
+        XCTAssertTrue(s.contains("- Reasons: Customers stay by choice."))
+        XCTAssertTrue(s.contains("Lenses not done yet: Business model"))
+        XCTAssertTrue(s.contains("<propose kind=\"deal_breaker\">"))
+        // The board shows progress in everyday words.
+        let rows = Wealth.board([Holding(ticker: "AAPL", shares: 1)], PriceBook(), today: "2026-11-13", started: ["AAPL": 3])
+        XCTAssertEqual(rows[0].next, "Started · 3 of 9 lenses done")
+    }
+
+    func testWealthCardsCarryAVerdictALensAndOwnership() throws {
+        let issue = try ReportIssue.decode(Data(#"""
+        {"date":"2026-11-13","section":"wealth","cards":[
+          {"id":"asml-moved","kind":"why-it-moved","label":"Why it moved","title":"ASML fell 6% this week.","playbook":"P5","holding":"ASML","status":"Owned",
+           "verdict":{"question":"Is why you own it still true?","answer":"Yes."}},
+          {"id":"watch","kind":"sentiment","label":"Sentiment","title":"T","playbook":"users","status":"watching","verdict":"Not tested."},
+          {"id":"end","kind":"end","label":"You're caught up","title":"Tomorrow: Nvidia."}]}
+        """#.utf8))
+        XCTAssertEqual(issue.section, "wealth")
+        XCTAssertEqual(issue.cards[0].lensName, "Supply chain")
+        XCTAssertEqual(issue.cards[0].status, "owned")
+        XCTAssertEqual(issue.cards[0].verdict?.answer, "Yes.")
+        XCTAssertEqual(issue.cards[1].lensName, "Users")
+        XCTAssertEqual(issue.cards[1].verdict?.question, "Is why you own it still true?")
+        XCTAssertTrue(issue.cards[0].plainText.contains("Is why you own it still true? Yes."))
+        XCTAssertEqual(SurfConfig.default.sections[0].issuesFolder, "newsletter/issues")
+        XCTAssertEqual(SectionDefinition(key: "wealth", name: "Wealth", icon: "x", accent: "#000000").issuesFolder, "newsletter/wealth/issues")
+        XCTAssertTrue(GoDeeper.system(profile: "", cardText: "", section: "Wealth").contains("never buy or sell advice"))
+        XCTAssertFalse(GoDeeper.system(profile: "", cardText: "", section: "Health").contains("buy or sell"))
+    }
+
+    // MARK: Name the company
+
+    static let puzzleCard = #"""
+    {"id":"puzzle-1","kind":"puzzle","label":"Name the company · No. 1","section":"wealth","playbook":"P2",
+     "title":"Whose business has <em>this shape?</em>","why":"One mystery public company.",
+     "puzzle":{"number":1,"answer":"Costco","full":"Costco Wholesale","period":"fiscal year ended Aug 2026","total":"$303.2B",
+       "caption":"Area is share of total revenue.",
+       "segments":[[116788,"Packaged food & household"],[77375,"Appliances, electronics & other goods"],[61369,"Gas, pharmacy, optical & services"],[41715,"Fresh food"],[5907,"Fees"]],
+       "clues":[{"title":"Where sales happen","bars":[{"label":"U.S.","pct":72.7},{"label":"Canada","pct":13.4},{"label":"Other countries","pct":13.9}]},
+                {"title":"Thin margins","text":"Operating income was $11.7B on $303.2B of revenue."},
+                {"title":"Home base","text":"Headquartered in Issaquah, Washington."}],
+       "why":"Costco sells goods close to cost.","lesson":"The smallest line can be the one the model protects.",
+       "sources":[{"text":"Costco Wholesale, {link}Form 10-K for fiscal 2026{/link}, Oct 2026.","url":"https://www.sec.gov/x"}]}}
+    """#
+
+    func testPuzzleCardDecodesAndLaysOutItsTreemap() throws {
+        let card = try JSONDecoder().decode(ReportCard.self, from: Data(Self.puzzleCard.utf8))
+        let puzzle = try XCTUnwrap(card.puzzle)
+        XCTAssertTrue(puzzle.isPlayable)
+        XCTAssertEqual(puzzle.segments.count, 5)
+        XCTAssertEqual(puzzle.clues[0].bars.map(\.pct), [72.7, 13.4, 13.9])
+        let tiles = puzzle.tiles
+        XCTAssertEqual(tiles.count, 5)
+        XCTAssertEqual(tiles.reduce(0) { $0 + $1.w * $1.h }, 1, accuracy: 0.0001)          // the tiles fill the square
+        XCTAssertEqual(tiles[0].percent, 116788.0 / 303154 * 100, accuracy: 0.01)
+        XCTAssertTrue(tiles[4].small)                                                       // the fees sliver
+        XCTAssertFalse(card.plainText.contains("Costco"))                                   // Go deeper never sees the answer
+        XCTAssertEqual(lensName(card), "Business model")
+    }
+    private func lensName(_ card: ReportCard) -> String? { card.lensName }
+
+    func testGuessingClosenessAndClues() {
+        var game = PuzzleGame(answer: "Costco")
+        XCTAssertEqual(game.status(clues: 5), "Guess 1 of 6")
+        XCTAssertEqual(game.guess("zzz"), .unknown)
+        XCTAssertEqual(game.guess("coke"), .accepted)                    // an alias
+        XCTAssertEqual(game.closeness("Coca-Cola"), 1)
+        XCTAssertEqual(game.hint("Coca-Cola"), "Same sector: Consumer staples · not Beverages")
+        XCTAssertEqual(game.guess("Coca-Cola"), .repeated("Coca-Cola"))
+        XCTAssertEqual(game.guess("Walmart"), .accepted)
+        XCTAssertEqual(game.hint("Walmart"), "Same industry: Retail · not Big-box & discount")
+        XCTAssertEqual(game.guess("bjs"), .accepted)
+        XCTAssertEqual(game.hint("BJ's Wholesale"), "Same niche, different company")
+        XCTAssertEqual(game.guess("Nvidia"), .accepted)
+        XCTAssertEqual(game.hint("Nvidia"), "Not in Technology")
+        XCTAssertEqual(game.cluesOpen(of: 5), 4)
+        XCTAssertEqual(game.status(clues: 5), "Guess 5 of 6 · clue 5 unlocked")
+        XCTAssertEqual(game.guess("costco wholesale"), .accepted)
+        XCTAssertTrue(game.won && game.finished)
+        XCTAssertEqual(game.cluesOpen(of: 5), 5)
+        XCTAssertEqual(game.guess("Target"), .over)
+        XCTAssertEqual(game.shareText(number: 1), "Name the company No. 1  5/6\n■□□\n■■□\n■■■\n□□□\n■■■")
+        var lost = PuzzleGame(answer: "Costco")
+        for name in ["Apple", "Meta", "Visa", "Ford", "Nike", "UPS"] { _ = lost.guess(name) }
+        XCTAssertTrue(lost.finished && !lost.won)
+        XCTAssertTrue(lost.shareText(number: nil).hasPrefix("Name the company  X/6"))
+        XCTAssertEqual(PuzzleCatalog.suggestions("co", excluding: ["Costco"]).first, "Coca-Cola")
+        XCTAssertEqual(PuzzleCatalog.resolve("McDonald\u{2019}s"), "McDonald's")          // a curly apostrophe from the keyboard
+        XCTAssertEqual(PuzzleCatalog.names.count, 49)
+    }
+
+    func testPuzzleStatsAndStreaks() {
+        var stats = PuzzleStats()
+        XCTAssertNil(stats.line)
+        func play(_ id: String, _ answer: String, _ guesses: [String]) {
+            var g = PuzzleGame(answer: answer); for name in guesses { _ = g.guess(name) }; stats.games[id] = g
+        }
+        play("2026-11-06", "Costco", ["Costco"])
+        play("2026-11-13", "Amazon", ["Apple", "Meta", "Visa", "Ford", "Nike", "UPS"])
+        play("2026-11-20", "Microsoft", ["Oracle", "Microsoft"])
+        play("2026-11-27", "Costco", ["Walmart", "Costco"])
+        play("2026-12-04", "Amazon", ["eBay"])                                             // still in play: not counted
+        XCTAssertEqual([stats.played, stats.solved, stats.streak, stats.bestStreak], [4, 3, 2, 2])
+        XCTAssertEqual(stats.line, "Solved 3 of 4 · streak 2")
+    }
 }

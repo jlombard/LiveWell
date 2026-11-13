@@ -75,3 +75,17 @@ final class WeekCommitment {
         self.weekStart = weekStart; self.habitKeys = habitKeys; self.date = date
     }
 }
+
+/// One committed week with its per-habit targets (see LiveWellCore's WeekRecord). Kept in the
+/// order saved; also written to app/commitments.json for the Mac.
+@Model
+final class CommitmentRecord {
+    var weekStart: String
+    var weekEnd: String
+    /// The WeekRecord as JSON.
+    var record: Data
+    var savedAt: Date
+    init(weekStart: String, weekEnd: String, record: Data, savedAt: Date) {
+        self.weekStart = weekStart; self.weekEnd = weekEnd; self.record = record; self.savedAt = savedAt
+    }
+}

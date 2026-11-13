@@ -5,6 +5,8 @@ import LiveWellCore
 /// issue files the Mac's morning run writes into newsletter/issues.
 struct ReportView: View {
     @Environment(AppModel.self) private var model
+    /// Which section's edition this is.
+    var sectionKey = SectionDefinition.healthKey
     @State private var section: Section = .today
     /// A past issue being read (nil = today's).
     @State private var backIssue: String?
@@ -15,15 +17,19 @@ struct ReportView: View {
     enum Section: String, CaseIterable { case today = "Today", archive = "Past issues", recipes = "Recipe box" }
 
     private var store: ReportStore { model.report }
+    private var edition: ReportStore.Edition { store.edition(isMain ? "" : sectionKey) }
+    /// The dashboard section's edition has the goal header and the food check-in.
+    private var isMain: Bool { sectionKey == (model.config.dashboardSection?.key ?? SectionDefinition.healthKey) }
+    private var tabs: [Section] { edition.archive.recipes.isEmpty ? [.today, .archive] : Section.allCases }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HorizonHeader()
-                    header.padding(.top, 20)
+                    if isMain { HorizonHeader() }
+                    header.padding(.top, isMain ? 20 : 0)
                     Picker("Section", selection: $section) {
-                        ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        ForEach(tabs, id: \.self) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
                     .padding(.top, 14)
@@ -33,9 +39,9 @@ struct ReportView: View {
                         switch section {
                         case .today: today
                         case .archive:
-                            sectionChips(store.archive.sections)
-                            ArchiveList(archive: store.archive, latest: store.latest?.date, section: sectionFilter) { open($0) }
-                        case .recipes: RecipeBox(archive: store.archive) { open($0) }
+                            sectionChips(edition.archive.sections)
+                            ArchiveList(archive: edition.archive, latest: edition.latest?.date, section: sectionFilter) { open($0) }
+                        case .recipes: RecipeBox(archive: edition.archive) { open($0) }
                         }
                     }
                     .padding(.top, 18)
@@ -53,31 +59,39 @@ struct ReportView: View {
                 if let raw = d.string(forKey: "demoSection") { section = raw == "archive" ? .archive : .recipes }
                 await store.reload()
                 try? await Task.sleep(for: .seconds(1))
-                if let card = d.string(forKey: "demoCard") { proxy.scrollTo(card, anchor: .top) }
-                if d.bool(forKey: "demoDeeper"), let issue = store.latest { deeper = DeeperTarget(issue: issue, card: issue.cards.first) }
+                if let card = d.string(forKey: "demoCard") { proxy.scrollTo(card, anchor: d.bool(forKey: "demoBottom") ? .bottom : .top) }
+                if d.bool(forKey: "demoDeeper"), let issue = edition.latest { deeper = DeeperTarget(issue: issue, card: issue.cards.first) }
             }
             #endif
         }
         .background(Theme.bg)
         .refreshable { await store.reload() }
         .task { await store.reload() }
+        .onAppear { model.markRead(sectionKey) }
+        .onChange(of: edition.latest?.date) { model.markRead(sectionKey) }
         .sheet(item: $deeper) { target in
             GoDeeperSheet(target: target).presentationDragIndicator(.visible)
         }
     }
 
     private func open(_ date: String) {
-        backIssue = date == store.latest?.date ? nil : date
+        backIssue = date == edition.latest?.date ? nil : date
         section = .today
     }
 
-    private var shown: ReportIssue? { backIssue.flatMap { store.issues[$0] } ?? store.latest }
+    private var shown: ReportIssue? { backIssue.flatMap { edition.issues[$0] } ?? edition.latest }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            (Text("The ") + Text("Surf").font(Theme.serif(40, relativeTo: .largeTitle, italic: true)) + Text(" Report"))
-                .font(Theme.serif(40, relativeTo: .largeTitle)).foregroundStyle(Theme.text)
-                .accessibilityAddTraits(.isHeader)
+            Group {
+                if isMain {
+                    Text("The ") + Text("Surf").font(Theme.serif(40, relativeTo: .largeTitle, italic: true)) + Text(" Report")
+                } else {
+                    Text(model.config.section(sectionKey)?.editionName ?? model.config.sectionName(sectionKey))
+                }
+            }
+            .font(Theme.serif(40, relativeTo: .largeTitle)).foregroundStyle(Theme.text)
+            .accessibilityAddTraits(.isHeader)
             if section == .today, let issue = shown {
                 Text((issue.issue.map { "No. \($0) · " } ?? "") + DayMath.dateline(issue.date))
                     .font(.footnote).foregroundStyle(Theme.secondary)
@@ -89,7 +103,7 @@ struct ReportView: View {
         if !model.folderLinked {
             empty("Link your Health Glance folder in Settings (the gear on Today) and the Report appears here.")
         } else if let issue = shown {
-            let isBack = issue.date != store.latest?.date
+            let isBack = issue.date != edition.latest?.date
             VStack(alignment: .leading, spacing: 16) {
                 if isBack {
                     HStack {
@@ -107,7 +121,7 @@ struct ReportView: View {
                 }
                 sectionChips(issue.sections)
                 // The food check-in belongs to the dashboard section.
-                if !isBack, sectionFilter == nil || sectionFilter == model.config.dashboardSection?.key {
+                if isMain, !isBack, sectionFilter == nil || sectionFilter == model.config.dashboardSection?.key {
                     PlanCheckinCard(issue: issue) { deeper = DeeperTarget(issue: issue, card: nil) }
                 }
                 ForEach(issue.cards.filter { sectionFilter == nil || $0.kind == "end" || issue.section(of: $0) == sectionFilter }) { card in
@@ -120,7 +134,7 @@ struct ReportView: View {
         } else if !store.hasLoaded {
             ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
         } else {
-            empty("No issues found yet. They arrive in newsletter/issues in the Health Glance folder after the Mac's morning run. Pull down to check again.")
+            empty("No issues found yet. They arrive in \(model.config.section(sectionKey)?.issuesFolder ?? "newsletter/issues") in the Health Glance folder after the Mac's morning run. Pull down to check again.")
         }
     }
 
@@ -188,8 +202,15 @@ struct CardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Kicker(label: showSection && !isEnd ? "\(model.config.sectionName(sectionKey)) · \(card.label)" : card.label,
-                   pillar: card.pillar, tag: card.tag, palette: palette)
-            if isEnd, let days = model.daysLeft {
+                   pillar: card.pillar ?? card.lensName,
+                   tag: [card.status.map { $0 == "owned" ? "Owned" : ($0 == "watching" ? "Watching" : $0.capitalized) }, card.tag].compactMap { $0 }.joined(separator: " · "),
+                   palette: palette)
+            if let verdict = card.verdict {
+                // The verdict leads: judged against his reasons, not the price.
+                (Text(verdict.question + " ").foregroundColor(palette.secondary) + Text(verdict.answer).fontWeight(.semibold).foregroundColor(palette.text))
+                    .font(.subheadline)
+            }
+            if isEnd, sectionKey == model.config.dashboardSection?.key, let days = model.daysLeft {   // only a section with a goal counts down
                 Text("\(days)").font(Theme.serif(84, relativeTo: .largeTitle)).foregroundStyle(palette.text)
             }
             if !card.title.isEmpty {
@@ -199,6 +220,7 @@ struct CardView: View {
             }
             if let why = card.why { Rich(why, font: .headline, color: palette.text, linkColor: palette.accent) }
             if let figure = card.figure { FigureView(figure: figure, palette: palette) }
+            if let puzzle = card.puzzle { PuzzleBoard(puzzle: puzzle, id: issue.date) }
             ForEach(Array(card.body.enumerated()), id: \.offset) { _, paragraph in
                 Rich(paragraph, color: palette.text, linkColor: palette.accent)
             }
@@ -219,7 +241,9 @@ struct CardView: View {
             if isEnd {
                 HStack(spacing: 10) {
                     Button("Past issues") { onSection(.archive) }.buttonStyle(GhostButton(palette: palette))
-                    Button("Recipe box") { onSection(.recipes) }.buttonStyle(GhostButton(palette: palette))
+                    if !model.report.edition(sectionKey == model.config.dashboardSection?.key ? "" : sectionKey).archive.recipes.isEmpty {
+                        Button("Recipe box") { onSection(.recipes) }.buttonStyle(GhostButton(palette: palette))
+                    }
                 }
             } else {
                 tools
@@ -232,9 +256,13 @@ struct CardView: View {
 
     private var tools: some View {
         let vote = model.report.vote(for: card, in: issue)
+        // A puzzle has nothing to go deeper on until it is over.
+        let playing = card.puzzle != nil && !(model.puzzles.games[issue.date]?.finished ?? false)
         return HStack(spacing: 10) {
-            Button(action: onDeeper) { Label("Go deeper", systemImage: "bubble.left") }
-                .buttonStyle(GhostButton(palette: palette))
+            if !playing {
+                Button(action: onDeeper) { Label("Go deeper", systemImage: "bubble.left") }
+                    .buttonStyle(GhostButton(palette: palette))
+            }
             Spacer()
             voteButton(1, pressed: vote == 1, symbol: "hand.thumbsup", label: "More like this")
             voteButton(-1, pressed: vote == -1, symbol: "hand.thumbsdown", label: "Less like this")

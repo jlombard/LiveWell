@@ -7,7 +7,21 @@ import UserNotifications
 import WidgetKit
 import LiveWellCore
 
-enum AppTab: Hashable { case today, report, checkin }
+enum AppTab: Hashable { case today, sections, rituals }
+
+/// A screen pushed inside a tab.
+enum Route: Hashable {
+    /// A section's home: its dashboard, today's issue, its library and its rituals.
+    case section(String)
+    /// A section's edition (the reader).
+    case issue(String)
+    case checkin
+    case library
+    /// One holding: its reasons, or the way to write them.
+    case holding(String)
+    /// Ask, scoped to a section and optionally to one holding.
+    case ask(String, String?)
+}
 
 struct FileStatus: Codable, Equatable {
     var lastWrite: Date?
@@ -29,6 +43,8 @@ struct AppSettings: Codable, Equatable {
     var chatModel = ClaudeClient.defaultModel
     /// Tell me when a new Surf Report issue arrives.
     var issueAlerts = true
+    /// The Wealth widget and front-page number: the day's change in place of the week's.
+    var wealthDaily = false
 
     init() {}
 
@@ -45,6 +61,7 @@ struct AppSettings: Codable, Equatable {
         formats = (try? c.decodeIfPresent(ExportFormats.self, forKey: .formats)) ?? d.formats
         chatModel = try c.decodeIfPresent(String.self, forKey: .chatModel) ?? d.chatModel
         issueAlerts = try c.decodeIfPresent(Bool.self, forKey: .issueAlerts) ?? d.issueAlerts
+        wealthDaily = try c.decodeIfPresent(Bool.self, forKey: .wealthDaily) ?? d.wealthDaily
     }
 
     var healthFolder: String { trialMode ? "health_app" : "health" }
@@ -67,6 +84,7 @@ final class AppModel {
     let health = HealthSync()
     let folder = HealthGlanceFolder()
     let report: ReportStore
+    let wealth = WealthStore()
 
     var config: SurfConfig { didSet { if config != oldValue { persist(config, "config.json"); recompute() } } }
     var settings: AppSettings {
@@ -87,6 +105,10 @@ final class AppModel {
     var pillarHistory: [String: [String: Double]] = [:]
     /// Days with a session from a source other than Health, by source name ("fitclub": ARX main sets).
     private(set) var sessionDays: [String: Set<String>] = [:]
+    /// Committed weeks with their per-habit targets, oldest first.
+    private(set) var commitments: [WeekRecord] = []
+    /// Every "Name the company" puzzle played, by issue date. Kept on the phone.
+    var puzzles = PuzzleStats() { didSet { if puzzles != oldValue { persist(puzzles, "puzzles.json") } } }
     /// What happened at cutover (shown in Settings).
     var cutoverNote: String?
     private(set) var statuses: [HabitStatus] = []
@@ -99,6 +121,12 @@ final class AppModel {
     private(set) var folderLinked = false
 
     var tab: AppTab = .today
+    /// What is pushed in each tab.
+    var paths: [AppTab: [Route]] = [:]
+    /// The newest issue date read, by section, for the unread dot on the front page.
+    var readIssues: [String: String] = UserDefaults.standard.dictionary(forKey: "readIssues") as? [String: String] ?? [:] {
+        didSet { UserDefaults.standard.set(readIssues, forKey: "readIssues") }
+    }
     var lastLogged: LoggedNote?
 
     private var exerciseMinutes: [DatedValue]?
@@ -111,24 +139,54 @@ final class AppModel {
 
     init() {
         container = try! ModelContainer(for: WorkoutEntry.self, HealthReading.self, MeasurementEntry.self,
-                                        Reflection.self, WeekCommitment.self)
+                                        Reflection.self, WeekCommitment.self, CommitmentRecord.self)
         report = ReportStore(folder: folder)
         config = Self.load("config.json") ?? .default
         settings = Self.load("settings.json") ?? AppSettings()
         fileStatus = Self.load("filestatus.json") ?? [:]
         exerciseMinutes = Self.load("exercise.json")
         pillarHistory = Self.load("pillars.json") ?? [:]
+        puzzles = Self.load("puzzles.json") ?? PuzzleStats()
+        #if DEBUG && targetEnvironment(simulator)
+        // Simulator only: `-demoGuesses "Walmart,Costco" -demoPuzzle 2026-11-13` shows a game in progress.
+        if let list = UserDefaults.standard.string(forKey: "demoGuesses"), let id = UserDefaults.standard.string(forKey: "demoPuzzle") {
+            var game = PuzzleGame(answer: UserDefaults.standard.string(forKey: "demoAnswer") ?? "Costco")
+            for name in list.split(separator: ",") { _ = game.guess(String(name)) }
+            puzzles.games = [id: game]
+        }
+        #endif
+        let saved = (try? container.mainContext.fetch(FetchDescriptor<CommitmentRecord>(sortBy: [SortDescriptor(\.savedAt)]))) ?? []
+        commitments = saved.compactMap { try? JSONDecoder().decode(WeekRecord.self, from: $0.record) }
         #if DEBUG && targetEnvironment(simulator)
         // Simulator only: `-demoFolder <path>` links a folder on the Mac without the file picker.
         if let path = UserDefaults.standard.string(forKey: "demoFolder") { try? folder.link(URL(fileURLWithPath: path)) }
-        if UserDefaults.standard.string(forKey: "demoTab") == "report" { tab = .report }
+        switch UserDefaults.standard.string(forKey: "demoTab") {
+        case "report": paths[.today] = [.issue(SectionDefinition.healthKey)]
+        case "health": paths[.today] = [.section(SectionDefinition.healthKey)]
+        case "wealth": paths[.today] = [.section(Wealth.sectionKey)]
+        case "wealthissue": paths[.today] = [.issue(Wealth.sectionKey)]
+        case "holding": paths[.today] = [.section(Wealth.sectionKey), .holding(UserDefaults.standard.string(forKey: "demoTicker") ?? "ASML")]
+        case "ask": paths[.today] = [.section(Wealth.sectionKey), .ask(Wealth.sectionKey, UserDefaults.standard.string(forKey: "demoTicker"))]
+        case "sections": tab = .sections
+        case "rituals": tab = .rituals
+        case "library": tab = .sections; paths[.sections] = [.library]
+        default: break
+        }
         #endif
         folderLinked = folder.isLinked
         folder.onDashboardChange = { [weak self] in self?.loadDashboard() }
         folder.onReportChange = { [weak self] in Task { await self?.report.reload() } }
         report.trialMode = { [weak self] in self?.settings.trialMode ?? true }
         report.onPlanChange = { [weak self] in self?.recompute() }
-        report.onNewIssue = { [weak self] in self?.announce($0) }
+        report.onNewIssue = { [weak self] issue, section in self?.announce(issue, section: section) }
+        report.otherFolders = { [weak self] in
+            guard let self else { return [:] }
+            let main = self.config.dashboardSection?.key
+            return Dictionary(uniqueKeysWithValues: self.config.sections.filter { $0.key != main && $0.editionName != nil }.map { ($0.key, $0.issuesFolder) })
+        }
+        wealth.onChange = { [weak self] in self?.wealthChanged() }
+        if !wealth.holdings.isEmpty, config.section(Wealth.sectionKey) == nil { wealthChanged() }
+        loadFramework()
         Task { await report.reload() }
         loadDashboard()
         loadCheckins()
@@ -207,6 +265,7 @@ final class AppModel {
         loadCheckins()
         recompute()
         await report.reload()
+        await wealth.refresh()
     }
 
     func workoutRows() -> [WorkoutRow] {
@@ -281,11 +340,16 @@ final class AppModel {
         let now = Date()
         statuses = HabitCounter.statuses(config: config, workouts: workoutRows(), exerciseMinutes: exerciseMinutes,
                                          mac: dashboard, planDays: report.planCount(today: GoalMath.dayString(now, calendar: calendar)),
-                                         sessionDays: sessionDays, now: now, calendar: calendar)
-        let snapshot = WidgetSnapshot.make(config: config, statuses: statuses, mac: dashboard,
+                                         sessionDays: sessionDays, commitment: activeCommitment, now: now, calendar: calendar)
+        var snapshot = WidgetSnapshot.make(config: config, statuses: statuses, mac: dashboard,
                                            todayString: GoalMath.dayString(now, calendar: calendar), now: now, calendar: calendar)
+        snapshot.wealthLine = wealthNumber.map { "\($0.text) \($0.label)" }
+        snapshot.wealthNext = wealth.holdings.isEmpty ? nil : Wealth.next(wealth.rows(today: today))
         if AppGroup.writeSnapshot(snapshot) { WidgetCenter.shared.reloadAllTimelines() }
     }
+
+    /// Rebuilds the widget snapshot (called when Wealth's numbers change).
+    func refreshWidgets() { recompute() }
 
     func rebuildFromHealth() async {
         health.resetAnchors()
@@ -376,12 +440,44 @@ final class AppModel {
         loadCheckins()
     }
 
-    func commitWeek(habits: [String], reflection: String?, prompt: String) {
+    /// The week in force today, if one was committed in the last 7 days.
+    var activeCommitment: WeekRecord? { Commitments.active(commitments, on: today) }
+
+    /// Replaces the saved weeks: SwiftData, then app/commitments.json for the Mac and the morning run.
+    private func saveCommitments(_ records: [WeekRecord]) {
+        commitments = records
+        for old in (try? context.fetch(FetchDescriptor<CommitmentRecord>())) ?? [] { context.delete(old) }
+        let base = Date()
+        for (i, record) in records.enumerated() {
+            guard let data = try? JSONEncoder().encode(record) else { continue }
+            context.insert(CommitmentRecord(weekStart: record.week_start, weekEnd: record.week_end, record: data,
+                                            savedAt: base.addingTimeInterval(Double(i) * 0.001)))
+        }
+        try? context.save()
+        do { try folder.write(AppFiles.json(records), to: Commitments.file) } catch { syncError = error.localizedDescription }
+        recompute()
+    }
+
+    /// Changes one habit's target for the current week only (from a long press on Today).
+    func changeCommitment(_ key: String, target: Double, reason: String?) {
+        saveCommitments(Commitments.change(commitments, today: today, habits: config.habits, key: key, target: target, reason: reason))
+    }
+
+    /// - targets: this week's target for any habit that differs from its usual goal.
+    @discardableResult
+    func commitWeek(habits: [String], reflection: String?, prompt: String, targets: [String: HabitCommitment] = [:]) -> WeekRecord? {
+        saveCommitments(Commitments.commit(commitments, today: today, habits: config.habits, targets: targets))
+        defer { try? context.save() }
+        return commitWeekLegacy(habits: habits, reflection: reflection, prompt: prompt)
+    }
+
+    private func commitWeekLegacy(habits: [String], reflection: String?, prompt: String) -> WeekRecord? {
         context.insert(WeekCommitment(weekStart: GoalMath.dayString(weekStart, calendar: calendar), habitKeys: habits, date: Date()))
         if let reflection, !reflection.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             context.insert(Reflection(prompt: prompt, text: reflection, date: Date()))
         }
         try? context.save()
+        return activeCommitment
     }
 
     // MARK: Monday reminder
@@ -409,10 +505,15 @@ final class AppModel {
     }
 
     func open(_ url: URL) {
+        if url.isFileURL { importHoldings(from: url); return }
+        let health = config.dashboardSection?.key ?? SectionDefinition.healthKey
         switch url.host {
-        case "checkin": tab = .checkin
-        case "report": tab = .report
-        default: tab = .today
+        case "wealth": tab = .today; paths[.today] = wealth.holdings.isEmpty ? [] : [.section(Wealth.sectionKey)]
+        case "checkin": tab = .rituals; paths[.rituals] = [.checkin]
+        case "report": tab = .today; paths[.today] = [.issue(health)]
+        case "front": tab = .today; paths[.today] = []
+        // The Health widgets open the Health dashboard.
+        default: tab = .today; paths[.today] = [.section(health)]
         }
     }
 

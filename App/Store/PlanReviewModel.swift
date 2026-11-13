@@ -13,8 +13,10 @@ struct ReviewData {
     /// The same facts as plain lines, saved with the decision for the morning run.
     var evidence: [String] {
         habits.map { h in
-            let weeks = h.weeks.map { $0.map(formatValue) ?? "not measured" }.joined(separator: ", then ")
-            return "\(h.name): \(weeks) against a goal of \(formatValue(h.goal))"
+            let weeks = zip(h.weeks, h.planned).map { value, plan in
+                (value.map(formatValue) ?? "not measured") + (plan.map { " (\($0))" } ?? "")
+            }.joined(separator: ", then ")
+            return "\(h.name): \(weeks) against a usual goal of \(formatValue(h.goal))"
         } + pillars.map { p in
             guard let to = p.to else { return "\(p.label): not measured" }
             guard let from = p.from else { return "\(p.label): \(formatValue(to)), not enough history for a 4-week trend" }
@@ -62,6 +64,12 @@ extension AppModel {
         let now = Date()
         let earlier = calendar.date(byAdding: .day, value: -7, to: now) ?? now
         let rows = workoutRows()
+        // The commitment in force at the end of each week; a changed target marks that week as planned.
+        func planned(_ habit: HabitDefinition, ending end: Date) -> String? {
+            guard let c = Commitments.active(commitments, on: GoalMath.dayString(end, calendar: calendar))?.habits[habit.key],
+                  c.target != habit.goal else { return nil }
+            return "\(formatValue(c.target)) planned" + (c.reason.map { ", \($0)" } ?? "")
+        }
         func week(ending end: Date, mac: DashboardData?) -> [HabitStatus] {
             HabitCounter.statuses(config: config, workouts: rows, exerciseMinutes: exerciseMinutesForReview, mac: mac,
                                   planDays: report.planCount(today: GoalMath.dayString(end, calendar: calendar)), sessionDays: sessionDays,
@@ -71,7 +79,7 @@ extension AppModel {
         let habits = config.habits.map { habit in
             PlanReview.HabitWeeks(key: habit.key, name: habit.name, goal: habit.goal,
                                   weeks: [first.first { $0.key == habit.key }?.value, second.first { $0.key == habit.key }?.value],
-                                  pillars: habit.pillars)
+                                  pillars: habit.pillars, planned: [planned(habit, ending: earlier), planned(habit, ending: now)])
         }
         let settingsText = (try? folder.read("settings.json")).flatMap { String(data: $0, encoding: .utf8) } ?? ""
         let pillars = (dashboard?.pillars ?? []).map { p -> PlanReview.PillarTrend in
@@ -145,13 +153,25 @@ extension AppModel {
 
     // MARK: new-issue notification
 
-    /// Posts a local notification with the lead card's headline, unless the app is in front.
-    func announce(_ issue: ReportIssue) {
+    /// One notification for all of the day's editions, sent as soon as they are ready, unless the
+    /// app is in front. A later edition the same morning updates it instead of adding a second.
+    func announce(_ issue: ReportIssue, section: String? = nil) {
         guard settings.issueAlerts, UIApplication.shared.applicationState != .active else { return }
+        let ready = editions.filter { $0.date == today && $0.stories > 0 }
         let content = UNMutableNotificationContent()
-        content.title = "The Surf Report"
-        content.body = issue.contentCards.first.map { RichText.plain($0.title) } ?? "Today\u{2019}s issue is here."
-        content.userInfo = ["link": DeepLink.report.absoluteString]
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "issue-\(issue.date)", content: content, trigger: nil))
+        content.title = ready.count > 1 ? "Your editions are ready" : "\(ready.first?.edition ?? "Your edition") is ready"
+        var parts = [issue.contentCards.first.map { RichText.plain($0.title) } ?? "Today\u{2019}s issue is here."]
+        // An ongoing to-do (writing reasons) is mentioned at most once a week; the Rituals tab carries the badge.
+        let rows = wealth.rows(today: today)
+        let todo = rows.filter { $0.status == .notWritten }.count
+        let lastNudge = UserDefaults.standard.string(forKey: "lastWealthNudge")
+        if todo > 0, lastNudge.flatMap({ DayMath.adding(7, to: $0) }).map({ $0 <= today }) ?? true {
+            parts.append("Wealth: 1 thing to do")
+            UserDefaults.standard.set(today, forKey: "lastWealthNudge")
+        }
+        content.body = parts.joined(separator: " · ")
+        let link = section == Wealth.sectionKey && ready.count == 1 ? DeepLink.wealth : (ready.count > 1 ? DeepLink.front : DeepLink.report)
+        content.userInfo = ["link": link.absoluteString]
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "editions-\(today)", content: content, trigger: nil))
     }
 }

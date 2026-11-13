@@ -39,6 +39,11 @@ targets:
         BGTaskSchedulerPermittedIdentifiers: [livewell.refresh]
         NSHealthShareUsageDescription: LiveWell reads your workouts, Exercise minutes, VO2 max, weight and sleep to keep your dashboard current.
         NSHealthUpdateUsageDescription: LiveWell saves a workout to Health when you log a lift, row or yoga session by hand.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Holdings CSV
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.comma-separated-values-text]
+        LSSupportsOpeningDocumentsInPlace: false
         CFBundleURLTypes:
           - CFBundleURLName: livewell
             CFBundleURLSchemes: [livewell]

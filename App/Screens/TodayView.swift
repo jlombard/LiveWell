@@ -2,12 +2,13 @@ import SwiftUI
 import UIKit
 import LiveWellCore
 
-/// Today: the one line for the day, the dashboard section's habit tiles (tap to log) and progress bars.
+/// Health's section home (the former Today tab): the one line for the day, habit tiles (tap to log),
+/// progress bars, then today's edition, the check-in and the library.
 struct TodayView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var logging: HabitDefinition?
-    @State private var showSettings = false
+    @State private var retargeting: HabitDefinition?
     /// Bar positions on screen; start at the values last seen and glide to today's.
     @State private var shown: [String: Double] = [:]
     @State private var deltas: [String: String] = [:]
@@ -15,23 +16,12 @@ struct TodayView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HorizonHeader {
-                    Button { showSettings = true } label: {
-                        Image(systemName: "gearshape").foregroundStyle(Theme.secondary).frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("Settings")
-                }
+                HorizonHeader()
 
                 Text(model.todayLine)
                     .font(Theme.serif(34, relativeTo: .largeTitle))
                     .foregroundStyle(Theme.text)
                     .padding(.top, 24)
-
-                if !model.folderLinked {
-                    setupCard("Link your Health Glance folder", "So the app can write Health files for the Mac and read your progress back.") { showSettings = true }
-                } else if !model.health.hasRequested {
-                    setupCard("Connect Apple Health", "Workouts sync on their own, with no Shortcuts.") { Task { await model.connectHealth() } }
-                }
 
                 HStack(alignment: .firstTextBaseline) {
                     Eyebrow("Last \(model.config.habitWindowDays) days")
@@ -43,6 +33,12 @@ struct TodayView: View {
                 HStack(spacing: 8) {
                     ForEach(model.statuses) { status in
                         HabitTile(status: status) { tap(status) }
+                            // Long press: change this habit's target for the current week only.
+                            .contextMenu {
+                                Button { retargeting = model.config.habit(status.key) } label: {
+                                    Label("Change this week\u{2019}s target", systemImage: "calendar.badge.clock")
+                                }
+                            }
                     }
                 }
                 .padding(.top, 10)
@@ -71,6 +67,8 @@ struct TodayView: View {
                 if let error = model.syncError {
                     Text(error).font(.footnote).foregroundStyle(Theme.secondary).padding(.top, 16)
                 }
+
+                SectionLinks(section: model.config.dashboardSection?.key ?? SectionDefinition.healthKey).padding(.top, 28)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -81,30 +79,18 @@ struct TodayView: View {
         .sheet(item: $logging) { habit in
             LogSheet(habit: habit).presentationDetents([.medium]).presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(item: $retargeting) { habit in
+            WeekTargetSheet(habit: habit).presentationDetents([.medium]).presentationDragIndicator(.visible)
+        }
         .onAppear { glide(); celebrateNewlyMet() }
         .onChange(of: model.dashboard) { glide() }
         .onChange(of: model.statuses) { celebrateNewlyMet() }
     }
 
-    private func setupCard(_ title: String, _ detail: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline).foregroundStyle(Theme.text)
-                Text(detail).font(.footnote).foregroundStyle(Theme.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 18)
-    }
-
     private func tap(_ status: HabitStatus) {
         guard let habit = model.config.habit(status.key) else { return }
         if habit.logsAs != nil { logging = habit }
-        else if case .planDays = habit.source { model.tab = .report }   // the food check-in opens the Report
+        else if case .planDays = habit.source { model.go(.issue(model.config.dashboardSection?.key ?? SectionDefinition.healthKey)) }   // the food check-in is in the edition
     }
 
     /// Each bar moves once from the value last seen to today's, staggered, under about 1.5 s.
@@ -162,10 +148,13 @@ struct HabitTile: View {
             VStack(spacing: 6) {
                 Image(systemName: status.symbol ?? HabitSymbol.name(status.key))
                     .font(.system(size: 20))
-                    .foregroundStyle(status.met ? Theme.accent : Theme.text)
+                    .foregroundStyle(status.met ? Theme.accent : (status.isOff ? Theme.secondary.opacity(0.6) : Theme.text))
                     .frame(height: 24)
                 Group {
-                    if let value = status.value {
+                    if status.isOff {
+                        // Off this week: quiet gray, neither met nor missed.
+                        Text("Off").foregroundColor(Theme.secondary)
+                    } else if let value = status.value {
                         if status.goal >= 100 {
                             Text("\(Int(value))")
                         } else {
@@ -179,7 +168,8 @@ struct HabitTile: View {
                 .foregroundStyle(Theme.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-                Text(status.name).font(.caption2).foregroundStyle(status.met ? Theme.text : Theme.secondary).lineLimit(1)
+                Text(status.isOff ? "this week" : status.name).font(.caption2)
+                    .foregroundStyle(status.met ? Theme.text : Theme.secondary).lineLimit(1)
             }
             .frame(maxWidth: .infinity, minHeight: 92)
             .background(status.met ? Theme.accent.opacity(0.14) : Theme.card, in: RoundedRectangle(cornerRadius: 16))
@@ -191,6 +181,7 @@ struct HabitTile: View {
     }
 
     private var label: String {
+        if status.isOff { return "\(status.name), off this week" + (status.reason.map { ", \($0)" } ?? "") }
         guard let value = status.value else { return "\(status.name), not measured" }
         return "\(status.name), \(Int(value)) of \(Int(status.goal))" + (status.met ? ", met" : "")
     }

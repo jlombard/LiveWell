@@ -431,6 +431,10 @@ struct CloseWeekView: View {
     @State private var reflection = ""
     @State private var done = false
     @State private var reviewing = false
+    /// This week's targets and reasons, for rows changed from the usual goal.
+    @State private var targets: [String: Double] = [:]
+    @State private var reasons: [String: String] = [:]
+    @State private var week: WeekRecord?
 
     private let prompt = "What feels easier lately?"
     /// Asked about one week in four, never required.
@@ -440,6 +444,14 @@ struct CloseWeekView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
+            #if DEBUG && targetEnvironment(simulator)
+            // Simulator only: `-demoClose 2` starts with a lighter week filled in.
+            Color.clear.onAppear {
+                if UserDefaults.standard.integer(forKey: "demoClose") == 2, targets.isEmpty {
+                    targets = ["row": 0, "yoga": 1]; reasons = ["row": "Vacation"]; committed = ["lift", "row"]
+                }
+            }
+            #endif
             if done { finished }
             else if reviewing { PlanReviewView { withAnimation(.easeInOut(duration: 0.8)) { done = true } } }
             else { choosing }
@@ -470,7 +482,7 @@ struct CloseWeekView: View {
                 .padding(.top, 4)
 
                 Text("Commit to the week.").font(Theme.serif(34, relativeTo: .largeTitle)).foregroundStyle(Theme.text).padding(.top, 30)
-                Text("Tap each habit to commit. Every one of them moves a bar.")
+                Text("Tap each habit to commit. Change a target for this week only if you need to.")
                     .font(.subheadline).foregroundStyle(Theme.secondary).padding(.top, 8)
 
                 VStack(spacing: 8) {
@@ -490,7 +502,13 @@ struct CloseWeekView: View {
 
                 if allOn {
                     PrimaryButton(title: "Commit") {
-                        model.commitWeek(habits: Array(committed), reflection: askReflection ? reflection : nil, prompt: prompt)
+                        var chosen: [String: HabitCommitment] = [:]
+                        for habit in model.config.habits {
+                            if let target = targets[habit.key], target != habit.goal {
+                                chosen[habit.key] = HabitCommitment(target: target, usual: habit.goal, reason: reasons[habit.key])
+                            }
+                        }
+                        week = model.commitWeek(habits: Array(committed), reflection: askReflection ? reflection : nil, prompt: prompt, targets: chosen)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                         // Every other week the plan review comes next.
                         withAnimation(.easeInOut(duration: 0.8)) { if model.reviewDue { reviewing = true } else { done = true } }
@@ -504,41 +522,62 @@ struct CloseWeekView: View {
 
     private func commitRow(_ habit: HabitDefinition) -> some View {
         let on = committed.contains(habit.key)
-        let target = habit.goal >= 100 ? "\(Int(habit.goal)) minutes" : "\(Int(habit.goal)) \(habit.goal == 1 ? "time" : "times")"
+        let target = targets[habit.key] ?? habit.goal
+        let commitment = HabitCommitment(target: target, usual: habit.goal, reason: reasons[habit.key])
+        let unit = habit.source == .planDays ? (habit.goal == 1 ? "day" : "days") : (habit.goal == 1 ? "time" : "times")
+        let usual = habit.source == .exerciseMinutes ? "\(Int(habit.goal)) minutes" : "\(Int(habit.goal)) \(unit)"
+        let line = Commitments.rowText(commitment, habit: habit) ?? usual
         let pillars = habit.pillars.map { key in model.dashboard?.pillars.first { $0.key == key }?.label ?? key.capitalized }
-        return Button {
-            if on { committed.remove(habit.key) } else { committed.insert(habit.key); UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().stroke(on ? Color.clear : Theme.secondary.opacity(0.6), lineWidth: 1.5)
-                    if on {
-                        Circle().fill(Theme.accent)
-                        Image(systemName: "checkmark").font(.caption.weight(.bold)).foregroundStyle(Theme.bg)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Button {
+                    if on { committed.remove(habit.key) } else { committed.insert(habit.key); UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle().stroke(on ? Color.clear : Theme.secondary.opacity(0.6), lineWidth: 1.5)
+                            if on {
+                                Circle().fill(Theme.accent)
+                                Image(systemName: "checkmark").font(.caption.weight(.bold)).foregroundStyle(Theme.bg)
+                            }
+                        }
+                        .frame(width: 28, height: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(habit.name).font(.body.weight(.semibold)).foregroundStyle(Theme.text)
+                            Text(line).font(.footnote).foregroundStyle(commitment.changed ? Theme.text : Theme.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(pillars.joined(separator: " · ")).font(.caption2).foregroundStyle(on ? Theme.accent : Theme.secondary)
+                        }
+                        Spacer(minLength: 0)
                     }
+                    .contentShape(Rectangle())
                 }
-                .frame(width: 28, height: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(habit.name).font(.body.weight(.semibold)).foregroundStyle(Theme.text)
-                    Text(target).font(.footnote).foregroundStyle(Theme.secondary)
-                }
-                Spacer()
-                Text(pillars.joined(separator: " · ")).font(.caption).foregroundStyle(on ? Theme.accent : Theme.secondary)
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(habit.name), \(line), moves \(pillars.joined(separator: " and "))")
+                .accessibilityAddTraits(on ? .isSelected : [])
+
+                TargetStepper(habit: habit, target: Binding(
+                    get: { targets[habit.key] ?? habit.goal },
+                    set: { targets[habit.key] = $0; if $0 == habit.goal { reasons[habit.key] = nil } }))
             }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 60)
-            .background(on ? Theme.accent.opacity(0.10) : Theme.cardDeep, in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(on ? Theme.accent.opacity(0.5) : Theme.line, lineWidth: 1))
+            if commitment.changed {
+                ReasonChips(selected: Binding(get: { reasons[habit.key] }, set: { reasons[habit.key] = $0 }))
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(habit.name), \(target), moves \(pillars.joined(separator: " and "))")
-        .accessibilityAddTraits(on ? .isSelected : [])
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .frame(minHeight: 60)
+        .background(on ? Theme.accent.opacity(0.10) : Theme.cardDeep, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(on ? Theme.accent.opacity(0.5) : Theme.line, lineWidth: 1))
     }
 
     private var finished: some View {
         VStack(spacing: 0) {
             Text("Committed.").font(Theme.serif(56, relativeTo: .largeTitle)).foregroundStyle(Theme.text)
-            Text("\(spelled(model.config.habits.count)) habits. One goal.").font(.body).foregroundStyle(Theme.secondary).padding(.top, 14)
+            Text(week.map(Commitments.closingLine) ?? "\(spelled(model.config.habits.count)) habits. One goal.")
+                .font(.body).foregroundStyle(Theme.secondary).multilineTextAlignment(.center).padding(.top, 14)
+            ForEach(week.map { Commitments.comeBack($0, habits: model.config.habits) } ?? [], id: \.self) { line in
+                Text(line).font(.footnote).foregroundStyle(Theme.secondary).multilineTextAlignment(.center).padding(.top, 6)
+            }
             Rectangle().fill(Theme.accent).frame(width: 120, height: 1).padding(.top, 40)
             if let days = model.daysLeft {
                 Text("\(days) days to the water.").font(Theme.serif(22, relativeTo: .title3, italic: true)).foregroundStyle(Theme.text).padding(.top, 18)
@@ -548,7 +587,7 @@ struct CloseWeekView: View {
                     .font(.footnote).foregroundStyle(Theme.secondary).multilineTextAlignment(.center)
                     .frame(maxWidth: 260).padding(.top, 28)
             }
-            Button("Back to Today") { model.tab = .today; dismiss() }
+            Button("Back to Today") { model.tab = .today; model.paths[.today] = []; model.paths[.rituals] = []; dismiss() }
                 .foregroundStyle(Theme.text).frame(minHeight: 44).padding(.top, 40)
         }
         .padding(32)
@@ -558,5 +597,103 @@ struct CloseWeekView: View {
     private func spelled(_ n: Int) -> String {
         let f = NumberFormatter(); f.numberStyle = .spellOut
         return (f.string(from: NSNumber(value: n)) ?? "\(n)").capitalized
+    }
+}
+
+// MARK: - this week's target
+
+/// Minus, the target, plus: sessions and plan days by 1, active minutes by 25.
+struct TargetStepper: View {
+    let habit: HabitDefinition
+    @Binding var target: Double
+
+    var body: some View {
+        HStack(spacing: 2) {
+            button("minus", -1, "Lower \(habit.name) this week")
+            Text(target == 0 ? "Off" : formatValue(target))
+                .font(.body.weight(.semibold).monospacedDigit())
+                .foregroundStyle(target == habit.goal ? Theme.text : Theme.accent)
+                .frame(minWidth: 38)
+                .accessibilityLabel(target == 0 ? "Off this week" : "\(formatValue(target)) this week")
+            button("plus", 1, "Raise \(habit.name) this week")
+        }
+    }
+
+    private func button(_ symbol: String, _ direction: Int, _ label: String) -> some View {
+        let next = Commitments.stepped(target, by: direction, habit: habit)
+        return Button { target = next; UISelectionFeedbackGenerator().selectionChanged() } label: {
+            Image(systemName: symbol).font(.footnote.weight(.semibold))
+                .foregroundStyle(next == target ? Theme.line : Theme.text)
+                .frame(width: 40, height: 44)
+                .background(Theme.bg.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .disabled(next == target)
+        .accessibilityLabel(label)
+    }
+}
+
+/// One optional reason for a changed week. Tapping the chosen one clears it.
+struct ReasonChips: View {
+    @Binding var selected: String?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(Commitments.reasons, id: \.self) { reason in
+                    let on = selected == reason
+                    Button { selected = on ? nil : reason } label: {
+                        Text(reason).font(.footnote.weight(on ? .semibold : .regular))
+                            .padding(.horizontal, 12).frame(minHeight: 34)
+                            .background(on ? Theme.accent.opacity(0.16) : Color.clear, in: Capsule())
+                            .overlay(Capsule().stroke(on ? Theme.accent : Theme.line, lineWidth: 1))
+                            .foregroundStyle(Theme.text)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                }
+            }
+        }
+    }
+}
+
+/// From a long press on a Today tile: change one habit's target for the current week.
+struct WeekTargetSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let habit: HabitDefinition
+    @State private var target: Double = 0
+    @State private var reason: String?
+
+    var body: some View {
+        let commitment = HabitCommitment(target: target, usual: habit.goal, reason: reason)
+        let end = model.activeCommitment?.week_end ?? DayMath.adding(6, to: model.today) ?? model.today
+        VStack(alignment: .leading, spacing: 16) {
+            Eyebrow("This week only")
+            Text(habit.name).font(Theme.serif(34, relativeTo: .largeTitle)).foregroundStyle(Theme.text)
+            HStack {
+                Text(Commitments.rowText(commitment, habit: habit) ?? "The usual: \(formatValue(habit.goal))")
+                    .font(.subheadline).foregroundStyle(commitment.changed ? Theme.text : Theme.secondary)
+                Spacer()
+                TargetStepper(habit: habit, target: $target)
+            }
+            if commitment.changed { ReasonChips(selected: $reason) }
+            Text("Applies from today through \(DayMath.weekdayName(end)), \(shortDay(end)). After that \(habit.name) returns to \(formatValue(habit.goal)) on its own. Your goals and progress bars don\u{2019}t change.")
+                .font(.footnote).foregroundStyle(Theme.secondary)
+            Spacer(minLength: 0)
+            PrimaryButton(title: "Save") {
+                model.changeCommitment(habit.key, target: target, reason: reason)
+                dismiss()
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Theme.bg)
+        .preferredColorScheme(.dark)
+        .onAppear {
+            let current = model.activeCommitment?.habits[habit.key]
+            target = current?.target ?? habit.goal
+            reason = current?.reason
+        }
     }
 }

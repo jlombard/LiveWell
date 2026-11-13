@@ -49,9 +49,14 @@ public struct HabitStatus: Codable, Equatable, Identifiable, Sendable {
     public var provenance: Provenance
     /// SF Symbol from the habit's definition.
     public var symbol: String?
+    /// Set when this week's commitment changed the target: the habit's usual goal, and why.
+    public var usualGoal: Double?
+    public var reason: String?
     public var id: String { key }
 
-    public var met: Bool { (value ?? 0) >= goal && value != nil }
+    /// Off this week (target set to 0): neither met nor missed.
+    public var isOff: Bool { goal == 0 && (usualGoal ?? 0) > 0 }
+    public var met: Bool { !isOff && (value ?? 0) >= goal && value != nil }
     /// 0...1, how much of the goal is done.
     public var fraction: Double { goal > 0 ? min(1, (value ?? 0) / goal) : 0 }
 
@@ -76,7 +81,7 @@ public enum HabitCounter {
     ///   (`HabitDefinition.alsoCounts`); each day in the window counts once.
     public static func statuses(config: SurfConfig, workouts: [WorkoutRow], exerciseMinutes: [DatedValue]?,
                                 mac: DashboardData?, planDays: Int? = nil, sessionDays: [String: Set<String>] = [:],
-                                now: Date, calendar: Calendar) -> [HabitStatus] {
+                                commitment: WeekRecord? = nil, now: Date, calendar: Calendar) -> [HabitStatus] {
         let start = windowStart(now: now, days: config.habitWindowDays, calendar: calendar)
         return config.habits.map { habit in
             var status = count(habit, config: config, workouts: workouts, exerciseMinutes: exerciseMinutes, mac: mac,
@@ -86,6 +91,10 @@ public enum HabitCounter {
                 status.value = value + Double(days.filter { $0 >= first && $0 <= last }.count)
             }
             status.symbol = habit.symbolName
+            // This week's commitment replaces the usual goal while it is in force.
+            if let c = commitment?.habits[habit.key], c.target != habit.goal {
+                status.goal = c.target; status.usualGoal = habit.goal; status.reason = c.reason
+            }
             return status
         }
     }
@@ -119,7 +128,7 @@ public enum HabitCounter {
     /// The unmet habit with the least of its goal done; nil when everything is met.
     /// Ties go to the order in the config. Habits with no reading are skipped.
     public static func furthestBehind(_ statuses: [HabitStatus]) -> HabitStatus? {
-        statuses.filter { !$0.met && $0.value != nil }.min { $0.fraction < $1.fraction }
+        statuses.filter { !$0.met && !$0.isOff && $0.value != nil }.min { $0.fraction < $1.fraction }
     }
 }
 
@@ -156,6 +165,9 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
     public var daysLeft: Int?
     public var title: String?
     public var bars: [Bar]?
+    /// Wealth: "+2.1% this week" and "Next: check ASML" (nil until holdings and prices exist).
+    public var wealthLine: String?
+    public var wealthNext: String?
 
     public static let fileName = "widget.json"
     public static let placeholder = WidgetSnapshot(
@@ -190,7 +202,8 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         // The circular widget shows the habit that counts Exercise minutes, whatever it is called.
         let minutesKey = config.habits.first { $0.source == .exerciseMinutes }?.key
         let active = statuses.first { $0.key == minutesKey }
-        let icons = statuses.map { s -> Icon in
+        // A habit that is off this week is left out, not dimmed.
+        let icons = statuses.filter { !$0.isOff }.map { s -> Icon in
             let goal = CheckinsFile.number(s.goal)
             let count = s.value.map { s.goal > 20 ? CheckinsFile.number($0) : "\(CheckinsFile.number($0))/\(goal)" }
             return Icon(key: s.key, name: s.name, met: s.met, symbol: s.symbol, count: count)

@@ -10,9 +10,13 @@
 		23F405930DA8F3CC6F905835 /* GoDeeperSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */; };
 		26F261D45F771394908802BB /* LiveWellCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7A64E5A3E1EE68B1930EBEB7 /* LiveWellCore */; };
 		37294F59E5F22D2D7670CB90 /* ClaudeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */; };
+		39128DCBD8245D5A0C7EB5AE /* RitualsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99ECE5D21BA9597D7E0FC17F /* RitualsView.swift */; };
 		47353084A345F524498BCE3B /* LiveWellWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5579FD04E481576AD158B7F4 /* WealthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39CDAD1943EA99159B78AA6 /* WealthStore.swift */; };
 		5AC7F1E5F7BF828FFE444B35 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */; };
 		5C17144813A5DD413DF91596 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4A8E74191D0348DE681202 /* ReportView.swift */; };
+		607042AD9DEC48EAEE766189 /* WealthBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8DAD7949903F3FDCFD121F2 /* WealthBoardView.swift */; };
+		620F111190ECCC6CB519E1A8 /* FrontPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD7E4D4E40861039C29C66C9 /* FrontPageView.swift */; };
 		65D3E384514DA00D38AABC1C /* LiveWellWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */; };
 		68E6A67A03584F5611250014 /* LiveWellApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CA20FCF1A2866F2640C46FC /* LiveWellApp.swift */; };
 		6C194F742C46154C258C3CC1 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = AA8A5864FECAB8DD952A46FB /* OFL.txt */; };
@@ -24,8 +28,10 @@
 		BE0CA26DAA74B8C73E9D5A06 /* ReportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */; };
 		BFA23E44020662F066709730 /* HealthSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB650A81CD9125680F4D4444 /* HealthSync.swift */; };
 		C669143D2072B756AA7B4FBF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B732B6B4407B2E8DED83B1 /* Theme.swift */; };
+		C82DCB823B338F0898FB6C2C /* SectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91E671BAF513EAEC28148304 /* SectionsView.swift */; };
 		CF20A5D3CBD0B17870A920E4 /* PlanReviewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD06F57C43CE23F23BCFCF8 /* PlanReviewModel.swift */; };
 		CF3DEFC74F448E1DAC88D65F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7249793B0C8B82CEDB47FC /* Models.swift */; };
+		D37810A91A797FC41B727C3B /* PuzzleBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C9DC85DB9E1BF436589F35 /* PuzzleBoard.swift */; };
 		E3F1FA6D1C2758B81D40ABAC /* HealthGlanceFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99B281BD9F45A3192C07F8D5 /* HealthGlanceFolder.swift */; };
 		E9004640AE00B15E1D34901D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCF3056296841FD2F6407BB /* AppModel.swift */; };
 		EA5D244B8917A4A317703E91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E18292B2823A0345EC79521 /* Assets.xcassets */; };
@@ -33,6 +39,8 @@
 		F18974E87B1C4480EF680CA6 /* InstrumentSerif-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */; };
 		F241CC4A5027E097E26AC95E /* FigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */; };
 		F47427C09519A926B887943E /* CheckinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE7DC0B1484953DD2479F99 /* CheckinView.swift */; };
+		F63D03D7EA508554C5B36E2B /* ShellModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30328D693D24DA04856C53E /* ShellModel.swift */; };
+		FC00ED5333E13F44192AF289 /* AskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883EDB1E3A5AD345415D4CEF /* AskView.swift */; };
 		FCB1D1A3044F8895FA7916B1 /* LiveWellCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6D05275FAF78DA2B7C85A360 /* LiveWellCore */; };
 /* End PBXBuildFile section */
 
@@ -72,25 +80,33 @@
 		2C3C99F6A4AE67B118A37D37 /* RichTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextView.swift; sourceTree = "<group>"; };
 		2DE7DC0B1484953DD2479F99 /* CheckinView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckinView.swift; sourceTree = "<group>"; };
 		35CF632FBFF8178E053D79B0 /* GoDeeperSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoDeeperSheet.swift; sourceTree = "<group>"; };
+		37C9DC85DB9E1BF436589F35 /* PuzzleBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PuzzleBoard.swift; sourceTree = "<group>"; };
 		420E3A7C1EDBECFF6D6FCC15 /* LiveWell.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LiveWell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C1D3661D3A121CDC0BC5110 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4C9342953812CACD4245AEB2 /* PlanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewView.swift; sourceTree = "<group>"; };
 		4E18292B2823A0345EC79521 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
 		4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWellWidget.swift; sourceTree = "<group>"; };
+		883EDB1E3A5AD345415D4CEF /* AskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskView.swift; sourceTree = "<group>"; };
+		91E671BAF513EAEC28148304 /* SectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionsView.swift; sourceTree = "<group>"; };
 		96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
 		99B281BD9F45A3192C07F8D5 /* HealthGlanceFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthGlanceFolder.swift; sourceTree = "<group>"; };
+		99ECE5D21BA9597D7E0FC17F /* RitualsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RitualsView.swift; sourceTree = "<group>"; };
 		9FCF3056296841FD2F6407BB /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		A12BBCBA24966D748D1262D9 /* InstrumentSerif-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Regular.ttf"; sourceTree = "<group>"; };
+		A8DAD7949903F3FDCFD121F2 /* WealthBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WealthBoardView.swift; sourceTree = "<group>"; };
 		AA8A5864FECAB8DD952A46FB /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		AB650A81CD9125680F4D4444 /* HealthSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSync.swift; sourceTree = "<group>"; };
+		AD7E4D4E40861039C29C66C9 /* FrontPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontPageView.swift; sourceTree = "<group>"; };
 		B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		BAD06F57C43CE23F23BCFCF8 /* PlanReviewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewModel.swift; sourceTree = "<group>"; };
 		C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FigureView.swift; sourceTree = "<group>"; };
 		D2B732B6B4407B2E8DED83B1 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		D39CDAD1943EA99159B78AA6 /* WealthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WealthStore.swift; sourceTree = "<group>"; };
 		DC2AB45514A5A12D58BFC6B7 /* LiveWellWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LiveWellWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportStore.swift; sourceTree = "<group>"; };
+		F30328D693D24DA04856C53E /* ShellModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,8 +141,10 @@
 				A6051DE4C752E9F4EA8BF2D1 /* Report */,
 				3A878F96F5F9168049601B78 /* Resources */,
 				FB3208D8EE9B9776F0966136 /* Screens */,
+				B132F93BC5EE134EB89C54E3 /* Shell */,
 				7B7406F02DE138E2834BAFDD /* Store */,
 				9FE584C8A9DEAC7CF42BF090 /* UI */,
+				BDA0DE8CF39320C5D60F8D3B /* Wealth */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -180,10 +198,32 @@
 			children = (
 				4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */,
 				C15ADF09C60BC53A8A7DBD66 /* FigureView.swift */,
+				37C9DC85DB9E1BF436589F35 /* PuzzleBoard.swift */,
 				EBDF51BAF312E0CC95E7FBBC /* ReportStore.swift */,
 				2C3C99F6A4AE67B118A37D37 /* RichTextView.swift */,
 			);
 			path = Report;
+			sourceTree = "<group>";
+		};
+		B132F93BC5EE134EB89C54E3 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				AD7E4D4E40861039C29C66C9 /* FrontPageView.swift */,
+				99ECE5D21BA9597D7E0FC17F /* RitualsView.swift */,
+				91E671BAF513EAEC28148304 /* SectionsView.swift */,
+				F30328D693D24DA04856C53E /* ShellModel.swift */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		BDA0DE8CF39320C5D60F8D3B /* Wealth */ = {
+			isa = PBXGroup;
+			children = (
+				883EDB1E3A5AD345415D4CEF /* AskView.swift */,
+				A8DAD7949903F3FDCFD121F2 /* WealthBoardView.swift */,
+				D39CDAD1943EA99159B78AA6 /* WealthStore.swift */,
+			);
+			path = Wealth;
 			sourceTree = "<group>";
 		};
 		D27B753C7A064BF6D7A29EA9 /* Files */ = {
@@ -369,9 +409,11 @@
 			files = (
 				5AC7F1E5F7BF828FFE444B35 /* AppGroup.swift in Sources */,
 				E9004640AE00B15E1D34901D /* AppModel.swift in Sources */,
+				FC00ED5333E13F44192AF289 /* AskView.swift in Sources */,
 				F47427C09519A926B887943E /* CheckinView.swift in Sources */,
 				37294F59E5F22D2D7670CB90 /* ClaudeClient.swift in Sources */,
 				F241CC4A5027E097E26AC95E /* FigureView.swift in Sources */,
+				620F111190ECCC6CB519E1A8 /* FrontPageView.swift in Sources */,
 				23F405930DA8F3CC6F905835 /* GoDeeperSheet.swift in Sources */,
 				E3F1FA6D1C2758B81D40ABAC /* HealthGlanceFolder.swift in Sources */,
 				BFA23E44020662F066709730 /* HealthSync.swift in Sources */,
@@ -379,12 +421,18 @@
 				CF3DEFC74F448E1DAC88D65F /* Models.swift in Sources */,
 				CF20A5D3CBD0B17870A920E4 /* PlanReviewModel.swift in Sources */,
 				B3A0570F2BA4AE7BAC7F544F /* PlanReviewView.swift in Sources */,
+				D37810A91A797FC41B727C3B /* PuzzleBoard.swift in Sources */,
 				BE0CA26DAA74B8C73E9D5A06 /* ReportStore.swift in Sources */,
 				5C17144813A5DD413DF91596 /* ReportView.swift in Sources */,
 				78F0CF9E35A5941104658E41 /* RichTextView.swift in Sources */,
+				39128DCBD8245D5A0C7EB5AE /* RitualsView.swift in Sources */,
+				C82DCB823B338F0898FB6C2C /* SectionsView.swift in Sources */,
 				9B1C645056A4A0450EDBD119 /* SettingsView.swift in Sources */,
+				F63D03D7EA508554C5B36E2B /* ShellModel.swift in Sources */,
 				C669143D2072B756AA7B4FBF /* Theme.swift in Sources */,
 				EF98BDC01981A1F0E51B221E /* TodayView.swift in Sources */,
+				607042AD9DEC48EAEE766189 /* WealthBoardView.swift in Sources */,
+				5579FD04E481576AD158B7F4 /* WealthStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

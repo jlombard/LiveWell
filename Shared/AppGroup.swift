@@ -34,6 +34,8 @@ enum DeepLink {
     static let today = URL(string: "livewell://today")!
     static let checkin = URL(string: "livewell://checkin")!
     static let report = URL(string: "livewell://report")!
+    static let wealth = URL(string: "livewell://wealth")!
+    static let front = URL(string: "livewell://front")!
 }
 
 /// SF Symbols for habits whose definition names none (configs and snapshots saved by older builds).

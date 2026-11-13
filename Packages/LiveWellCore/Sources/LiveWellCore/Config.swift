@@ -120,6 +120,8 @@ public struct SectionDefinition: Codable, Equatable, Identifiable, Sendable {
     public var name: String         // "Health"
     public var icon: String         // SF Symbol
     public var accent: String       // "#5DB0F0"
+    /// The name of this section's daily edition ("The Surf Report", "Build Wealth"); nil = none.
+    public var edition: String?
     public var goal: GoalDefinition?
     public var habits: [HabitDefinition]
     public var measurements: [MeasurementDefinition]
@@ -131,14 +133,23 @@ public struct SectionDefinition: Codable, Equatable, Identifiable, Sendable {
 
     public var id: String { key }
 
-    public init(key: String, name: String, icon: String, accent: String, goal: GoalDefinition? = nil,
+    public init(key: String, name: String, icon: String, accent: String, edition: String? = nil, goal: GoalDefinition? = nil,
                 habits: [HabitDefinition] = [], measurements: [MeasurementDefinition] = [], dashboard: Bool = false,
                 pillarGoals: [String: Double] = [:]) {
-        self.key = key; self.name = name; self.icon = icon; self.accent = accent; self.goal = goal
+        self.key = key; self.name = name; self.icon = icon; self.accent = accent; self.edition = edition; self.goal = goal
         self.habits = habits; self.measurements = measurements; self.dashboard = dashboard; self.pillarGoals = pillarGoals
     }
 
-    enum CodingKeys: String, CodingKey { case key, name, icon, accent, goal, habits, measurements, dashboard, pillarGoals }
+    enum CodingKeys: String, CodingKey { case key, name, icon, accent, edition, goal, habits, measurements, dashboard, pillarGoals }
+
+    /// Where this section's issue files live in the Health Glance folder. Health keeps its original
+    /// folder; every other section has its own, so editions are never blended.
+    public var issuesFolder: String {
+        key == SectionDefinition.healthKey ? "newsletter/issues" : "newsletter/\(key)/issues"
+    }
+
+    /// The edition's name, with the built-in one for Health configs saved before editions were named.
+    public var editionName: String? { edition ?? (key == SectionDefinition.healthKey ? "The Surf Report" : nil) }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -146,6 +157,7 @@ public struct SectionDefinition: Codable, Equatable, Identifiable, Sendable {
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? key.prefix(1).uppercased() + key.dropFirst()
         icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? "circle"
         accent = try c.decodeIfPresent(String.self, forKey: .accent) ?? SectionDefinition.defaultAccent
+        edition = try c.decodeIfPresent(String.self, forKey: .edition)
         goal = try c.decodeIfPresent(GoalDefinition.self, forKey: .goal)
         habits = try c.decodeIfPresent([HabitDefinition].self, forKey: .habits) ?? []
         measurements = try c.decodeIfPresent([MeasurementDefinition].self, forKey: .measurements) ?? []
@@ -202,7 +214,7 @@ public struct SurfConfig: Codable, Equatable, Sendable {
     public init(goal: GoalDefinition, habits: [HabitDefinition], measurements: [MeasurementDefinition],
                 workoutTypeMap: [String: String], habitWindowDays: Int = 7) {
         self.init(sections: [SectionDefinition(key: SectionDefinition.healthKey, name: "Health", icon: "figure.surfing",
-                                               accent: SectionDefinition.defaultAccent, goal: goal, habits: habits,
+                                               accent: SectionDefinition.defaultAccent, edition: "The Surf Report", goal: goal, habits: habits,
                                                measurements: measurements, dashboard: true)],
                   workoutTypeMap: workoutTypeMap, habitWindowDays: habitWindowDays)
     }

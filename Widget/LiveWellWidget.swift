@@ -204,14 +204,124 @@ struct LiveWellWidgetView: View {
     }
 }
 
-@main
 struct LiveWellWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "LiveWellWidget", provider: SurfProvider()) { entry in
             LiveWellWidgetView(entry: entry)
         }
-        .configurationDisplayName("LiveWell")
+        .configurationDisplayName("Health")
         .description("Today\u{2019}s one thing, and your habits.")
         .supportedFamilies([.accessoryRectangular, .accessoryCircular, .systemSmall, .systemMedium])
+    }
+}
+
+// MARK: - Wealth and the combined widget
+
+/// Wealth, small or on the lock screen: the week's change in percent and the one thing to do.
+/// Same ink as everything else; no red or green, no prices.
+struct WealthView: View {
+    @Environment(\.widgetFamily) private var family
+    let snapshot: WidgetSnapshot
+
+    var body: some View {
+        let line = snapshot.wealthLine, next = snapshot.wealthNext ?? "Import your holdings in LiveWell."
+        if family == .accessoryRectangular {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(line ?? "Wealth").font(.headline).lineLimit(1).minimumScaleFactor(0.7)
+                Text(next).font(.caption).lineLimit(2).opacity(0.8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Wealth").font(.caption2).tracking(1.2).textCase(.uppercase).foregroundStyle(Ink.secondary)
+                Spacer(minLength: 4)
+                if let line {
+                    let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
+                    Text(parts[0]).font(.system(size: 34, weight: .regular, design: .serif)).foregroundStyle(Ink.text)
+                        .minimumScaleFactor(0.6).lineLimit(1)
+                    if parts.count > 1 { Text(parts[1]).font(.caption).foregroundStyle(Ink.secondary) }
+                }
+                Spacer(minLength: 6)
+                Text(next).font(.caption).foregroundStyle(Ink.text).lineLimit(2).minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+/// Medium: the Health line and the Wealth line, one above the other.
+struct CombinedView: View {
+    let snapshot: WidgetSnapshot
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Link(destination: DeepLink.today) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text((snapshot.title ?? "Health") + (snapshot.daysLeft.map { " · \($0) days" } ?? ""))
+                            .font(.caption2).tracking(1.2).textCase(.uppercase).foregroundStyle(Ink.secondary)
+                        Text(snapshot.line).font(.system(size: 20, weight: .regular, design: .serif)).foregroundStyle(Ink.text)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                    Spacer(minLength: 4)
+                    HabitIcons(icons: snapshot.icons, size: 13, colored: true).frame(width: 118)
+                }
+                .frame(maxHeight: .infinity)
+            }
+            Rectangle().fill(Ink.line).frame(height: 1)
+            Link(destination: DeepLink.wealth) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Wealth" + (snapshot.wealthNext.map { " · " + $0.replacingOccurrences(of: ".", with: "") } ?? ""))
+                        .font(.caption2).tracking(1.2).textCase(.uppercase).foregroundStyle(Ink.secondary).lineLimit(1)
+                    Text(snapshot.wealthLine ?? "Import your holdings in LiveWell")
+                        .font(.system(size: 20, weight: .regular, design: .serif)).foregroundStyle(Ink.text)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+struct WealthWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "LiveWellWealth", provider: SurfProvider()) { entry in
+            WealthWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Wealth")
+        .description("The week across your holdings, in percent, and the one thing to do.")
+        .supportedFamilies([.systemSmall, .accessoryRectangular])
+    }
+}
+
+private struct WealthWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: SurfEntry
+    var body: some View {
+        if family == .accessoryRectangular {
+            WealthView(snapshot: entry.snapshot).containerBackground(.clear, for: .widget).widgetURL(DeepLink.wealth)
+        } else {
+            WealthView(snapshot: entry.snapshot).containerBackground(Ink.bg, for: .widget).widgetURL(DeepLink.wealth)
+        }
+    }
+}
+
+struct CombinedWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "LiveWellCombined", provider: SurfProvider()) { entry in
+            CombinedView(snapshot: entry.snapshot).containerBackground(Ink.bg, for: .widget)
+        }
+        .configurationDisplayName("Health and Wealth")
+        .description("One line from each section.")
+        .supportedFamilies([.systemMedium])
+    }
+}
+
+@main
+struct LiveWellWidgets: WidgetBundle {
+    var body: some Widget {
+        LiveWellWidget()
+        WealthWidget()
+        CombinedWidget()
     }
 }
