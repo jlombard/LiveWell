@@ -76,7 +76,7 @@ extension AppModel {
                   let card = issue.cards.first(where: { $0.puzzle?.isPlayable == true }) else { continue }
             let game = puzzles.games[issue.date]
             if game?.finished == true { continue }
-            let day = DayMath.weekdayName(issue.date)
+            let day = issue.date == today ? "Today\u{2019}s" : "\(DayMath.weekdayName(issue.date))\u{2019}s"
             let left = Puzzle.maxGuesses - (game?.guesses.count ?? 0)
             return (section.key, "\(day) puzzle: Name the company",
                     "\(section.name) · " + (game == nil ? "six guesses from a revenue map" : "\(left) \(left == 1 ? "guess" : "guesses") left")

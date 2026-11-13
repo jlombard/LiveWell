@@ -21,8 +21,11 @@ final class ReportStore {
     /// Set by AppModel: section key → issues folder, for every section with an edition besides Health.
     var otherFolders: () -> [String: String] = { [:] }
 
-    /// A section's edition; Health's (or an unknown key's) is the original one.
-    func edition(_ section: String) -> Edition { others[section] ?? Edition(issues: issues, archive: archive) }
+    /// A section's edition. "" is the main one (Health). A section that hasn't published yet has
+    /// an empty edition; it must never fall back to another section's issues.
+    func edition(_ section: String) -> Edition {
+        section.isEmpty ? Edition(issues: issues, archive: archive) : (others[section] ?? Edition())
+    }
     private(set) var hasLoaded = false
     private(set) var plan = PlanDaysFile()
     private(set) var votes: [String: CardVote] = [:]

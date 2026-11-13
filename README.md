@@ -193,8 +193,9 @@ Mac), a real Build Wealth issue from the morning run, and the Wealth widgets on 
 
 ## Wealth: the weekly puzzle (step 5)
 
-"Name the company" is a card kind that plays inside the card, ported from the prototype: a
-treemap of revenue by type with generic labels, six guesses with type-ahead over 49 companies
+"Name the company" is a daily card kind (weekly at first; daily since Nov 13, 2026) that plays
+inside the card, ported from the prototype: a
+treemap of revenue by type with generic labels, six guesses with type-ahead over 110 companies
 and their aliases, a clue unlocked by each miss, and three squares of closeness per guess
 (sector, industry, niche). The reveal names the company, explains the shape, gives the lesson
 and the sources, and offers a share grid in black and white squares. Results, streaks and stats

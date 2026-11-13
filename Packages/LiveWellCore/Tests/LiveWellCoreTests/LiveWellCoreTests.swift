@@ -894,7 +894,10 @@ final class LiveWellCoreTests: XCTestCase {
         XCTAssertTrue(lost.shareText(number: nil).hasPrefix("Name the company  X/6"))
         XCTAssertEqual(PuzzleCatalog.suggestions("co", excluding: ["Costco"]).first, "Coca-Cola")
         XCTAssertEqual(PuzzleCatalog.resolve("McDonald\u{2019}s"), "McDonald's")          // a curly apostrophe from the keyboard
-        XCTAssertEqual(PuzzleCatalog.names.count, 49)
+        XCTAssertEqual(PuzzleCatalog.names.count, 110)
+        XCTAssertTrue(PuzzleCatalog.tree.values.allSatisfy { $0.count == 3 })
+        XCTAssertTrue(PuzzleCatalog.aliases.values.allSatisfy { PuzzleCatalog.tree[$0] != nil })   // every alias points at a real entry
+        XCTAssertEqual(PuzzleCatalog.resolve("amex"), "American Express")
     }
 
     func testPuzzleStatsAndStreaks() {
