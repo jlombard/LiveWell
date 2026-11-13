@@ -51,6 +51,13 @@ public enum HoldingsCSV {
         return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isLetter && $0.isASCII && $0.isUppercase } }
     }
 
+    /// A cash position by its description: a bank sweep or money-market fund can carry a
+    /// ticker-like symbol (QPSIQ, SPAXX) but is not a holding to write reasons for.
+    public static func isCash(_ name: String?) -> Bool {
+        guard let n = name?.lowercased() else { return false }
+        return ["sweep", "money market", "cash", "deposit program", "bank deposit", "fdic"].contains { n.contains($0) }
+    }
+
     public static func parse(_ text: String) -> [Holding] {
         var clean = text.replacingOccurrences(of: "\u{FEFF}", with: "")
         // Some exports are tab-separated; read them the same way.
@@ -76,6 +83,7 @@ public enum HoldingsCSV {
             guard isTicker(ticker), let shares = number(row[q]), shares > 0 else { continue }
             let cost = c.flatMap { $0 < row.count ? number(row[$0]) : nil }
             let name = n.flatMap { $0 < row.count ? row[$0].trimmingCharacters(in: .whitespaces) : nil }
+            if isCash(name) { continue }
             if var existing = byTicker[ticker] {   // the same holding in two lots or accounts
                 existing.shares += shares
                 if let cost { existing.costBasis = (existing.costBasis ?? 0) + cost }

@@ -62,7 +62,8 @@ final class WealthStore {
 
     init() {
         if let saved: Saved = AppModel.load(Self.fileName) {
-            holdings = saved.holdings; importedOn = saved.importedOn; book = saved.book
+            // Cash positions imported by an earlier build are dropped.
+            holdings = saved.holdings.filter { !HoldingsCSV.isCash($0.name) }; importedOn = saved.importedOn; book = saved.book
             reasons = saved.reasons ?? [:]; drafts = saved.drafts ?? [:]
         }
         #if DEBUG && targetEnvironment(simulator)

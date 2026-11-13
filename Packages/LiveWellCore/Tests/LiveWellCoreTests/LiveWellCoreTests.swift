@@ -659,6 +659,9 @@ final class LiveWellCoreTests: XCTestCase {
         let csv = ([header] + rows).joined(separator: "\n")
         let h = HoldingsCSV.parse(csv)
         XCTAssertEqual(h.map(\.ticker), ["AAPL", "ASML"])                  // the cash sweep has a number, not a ticker
+        // A sweep with a ticker-like symbol (as in his real file) is cash too.
+        let sweep = "1234,IRA,SOMEONE,Rollover IRA,QPSIQ,BANK DEPOSIT SWEEP PROGRAM,\"1,204.11\",USD,,,\"1,204.11\",1,USD,,,0,USD,0,0,USD,0,\"1,204.11\",USD,,,2"
+        XCTAssertEqual(HoldingsCSV.parse(([header] + rows + [sweep]).joined(separator: "\n")).map(\.ticker), ["AAPL", "ASML"])
         XCTAssertEqual(h[0].shares, 120); XCTAssertEqual(h[0].costBasis, 15_300)
         XCTAssertEqual(h.map(\.displayName), ["Apple", "ASML"])
         // The same file saved tab-separated reads the same.
