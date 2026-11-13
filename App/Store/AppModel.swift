@@ -85,6 +85,7 @@ final class AppModel {
     let folder = HealthGlanceFolder()
     let report: ReportStore
     let wealth = WealthStore()
+    let ask = AskStore()
 
     var config: SurfConfig { didSet { if config != oldValue { persist(config, "config.json"); recompute() } } }
     var settings: AppSettings {

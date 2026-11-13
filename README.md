@@ -163,6 +163,11 @@ Health moved into it unchanged. Built to the "Sections: Health + Wealth" row on 
   answer so lenses are grounded in filings. It proposes lines; a line joins the draft only when
   you tap "Add to my draft", and every line can be reworded or removed. The draft saves once it
   has a belief, a reason and a deal-breaker.
+- **Answers outlive the screen.** A conversation lives in `AskStore`, not in the view: an
+  answer keeps arriving while you look at other screens, the board and Rituals show "Ask is
+  answering…" and then "Answer ready in Ask", and each conversation is kept on the phone until
+  you start it over. Leaving the app mid-answer gets about half a minute from iOS; after that
+  the answer stops, what arrived is kept, and you can ask it to continue.
 - **Language.** The app and the prompts use the everyday words from the spec's table; the
   framework's terms stay in the framework document.
 - **Board, Rituals.** A written holding reads "Still true"; a started one shows its lens

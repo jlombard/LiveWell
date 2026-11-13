@@ -153,7 +153,9 @@ extension AppModel {
             let unwritten = rows.filter { $0.status == .notWritten }.count
             out.append(Ritual(id: "write-\(next.ticker)", when: .dueNow, section: Wealth.sectionKey,
                               kicker: "Wealth · until all \(rows.count) are written", title: "Write why you own \(next.name)",
-                              detail: next.next == "Write why you own it" ? "\(unwritten) of \(rows.count) still to write" : next.next,
+                              detail: ask.state(AskStore.key(Wealth.sectionKey, next.ticker)) == .ready ? "Answer ready in Ask"
+                                  : (ask.state(AskStore.key(Wealth.sectionKey, next.ticker)) == .answering ? "Ask is answering\u{2026}"
+                                  : (next.next == "Write why you own it" ? "\(unwritten) of \(rows.count) still to write" : next.next)),
                               route: .ask(Wealth.sectionKey, next.ticker)))
         }
         for r in wealth.reasons.values where r.source == "app" {

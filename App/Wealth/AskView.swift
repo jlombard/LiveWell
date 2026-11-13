@@ -59,29 +59,20 @@ struct HoldingView: View {
 
 /// Ask: a conversation scoped to a section. With a holding, it is the guided way to write his
 /// reasons: nine lenses, proposals he approves one line at a time, and a draft that builds beside it.
+/// The conversation lives in `AskStore`, so an answer keeps arriving if he leaves this screen.
 struct AskView: View {
     @Environment(AppModel.self) private var model
     let section: String
     let ticker: String?
 
-    struct Message: Identifiable {
-        enum Role { case reader, claude, note }
-        let id = UUID()
-        var role: Role
-        var text: String
-        var proposals: [Proposals.Proposal] = []
-        var finished = false
-    }
-
-    @State private var messages: [Message] = []
-    @State private var turns: [GoDeeper.Turn] = []
     @State private var input = ""
-    @State private var asking: Task<Void, Never>?
     @State private var hasKey = Keychain.apiKey != nil
-    @State private var lens: String?
     @State private var showDraft = false
     @FocusState private var inputFocused: Bool
 
+    private var key: String { AskStore.key(section, ticker) }
+    private var session: AskStore.Session { model.ask.session(key) }
+    private var answering: Bool { model.ask.running.contains(key) }
     private var isWealth: Bool { section == Wealth.sectionKey }
     private var holding: Holding? { ticker.flatMap { model.wealth.holding($0) } }
     private var draft: ReasonsDraft? { ticker.map { model.wealth.draft($0) } }
@@ -98,13 +89,14 @@ struct AskView: View {
             let rows = model.wealth.rows(today: model.today)
             return Ask.wealthSystem(
                 holdings: rows.map { ($0.name, $0.ticker, $0.share.map { Int(($0 * 100).rounded()) }, $0.status != .notWritten) },
-                today: model.today, focus: holding.map { ($0.displayName, $0.ticker) }, lens: lens.flatMap(Lens.named),
+                today: model.today, focus: holding.map { ($0.displayName, $0.ticker) }, lens: session.lens.flatMap(Lens.named),
                 draft: draft, existing: ticker.flatMap { model.wealth.reasons[$0] })
         }
         return Ask.healthSystem(profile: model.report.latest?.profile ?? "", today: model.today)
     }
 
     var body: some View {
+        let messages = session.messages
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 Eyebrow("Ask · \(model.config.sectionName(section))")
@@ -137,12 +129,16 @@ struct AskView: View {
                             }
                         }
                         ForEach(messages) { bubble($0) }
+                        if answering {
+                            note("You can leave this screen. The answer keeps arriving and will be here when you come back.")
+                        }
                         Color.clear.frame(height: 1).id("end")
                     }
                     .padding(.horizontal, 20).padding(.vertical, 16)
                 }
                 .onChange(of: messages.last?.text) { proxy.scrollTo("end", anchor: .bottom) }
                 .onChange(of: messages.count) { proxy.scrollTo("end", anchor: .bottom) }
+                .onAppear { proxy.scrollTo("end", anchor: .bottom) }
             }
 
             if hasKey {
@@ -152,10 +148,10 @@ struct AskView: View {
                         .padding(12)
                         .background(Theme.cardDeep, in: RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.line, lineWidth: 1))
-                    Button(asking == nil ? "Send" : "Stop") { if let asking { asking.cancel() } else { ask(input) } }
+                    Button(answering ? "Stop" : "Send") { if answering { model.ask.stop(key) } else { ask(input) } }
                         .font(.headline).frame(minWidth: 64, minHeight: 46)
                         .background(Theme.text, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(Theme.bg)
-                        .disabled(asking == nil && input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(!answering && input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding(.horizontal, 20).padding(.vertical, 12)
             }
@@ -163,14 +159,21 @@ struct AskView: View {
         .background(Theme.bg)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            if let draft {
-                ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !messages.isEmpty {
+                    Menu {
+                        Button("Start this conversation over", role: .destructive) { model.ask.clear(key) }
+                    } label: { Image(systemName: "ellipsis").frame(width: 36, height: 36) }
+                    .accessibilityLabel("More")
+                }
+                if let draft {
                     Button("Draft · \(draft.lines.count)") { showDraft = true }.font(.subheadline.weight(.semibold))
                 }
             }
         }
         .sheet(isPresented: $showDraft) { if let ticker { DraftSheet(ticker: ticker).presentationDragIndicator(.visible) } }
-        .onDisappear { asking?.cancel() }
+        .onAppear { model.ask.visible = key; model.ask.seen(key); hasKey = Keychain.apiKey != nil }
+        .onDisappear { if model.ask.visible == key { model.ask.visible = nil } }
     }
 
     /// The nine lenses: tap to start one, and it is marked done when you move on.
@@ -179,7 +182,7 @@ struct AskView: View {
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(Lens.all) { item in
-                    let current = lens == item.key
+                    let current = session.lens == item.key
                     Button { start(item) } label: {
                         HStack(spacing: 5) {
                             if done.contains(item.key) { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
@@ -191,7 +194,7 @@ struct AskView: View {
                         .foregroundStyle(done.contains(item.key) && !current ? Theme.secondary : Theme.text)
                     }
                     .buttonStyle(.plain)
-                    .disabled(asking != nil || !hasKey)
+                    .disabled(answering || !hasKey)
                     .accessibilityLabel("\(item.name) lens\(done.contains(item.key) ? ", done" : "")\(current ? ", current" : "")")
                 }
             }
@@ -201,7 +204,7 @@ struct AskView: View {
 
     private func note(_ text: String) -> some View { Text(text).font(.footnote).foregroundStyle(Theme.secondary) }
 
-    @ViewBuilder private func bubble(_ m: Message) -> some View {
+    @ViewBuilder private func bubble(_ m: AskStore.Message) -> some View {
         switch m.role {
         case .note: note(m.text)
         case .reader:
@@ -210,11 +213,12 @@ struct AskView: View {
                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(Theme.text)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         case .claude:
+            let parts = m.parts
             VStack(alignment: .leading, spacing: 10) {
-                Text(m.text.isEmpty ? (isWealth ? "Reading the filings\u{2026}" : "Thinking\u{2026}") : m.text)
-                    .font(.body).foregroundStyle(m.text.isEmpty ? Theme.secondary : Theme.text)
+                Text(parts.text.isEmpty ? (isWealth ? "Reading the filings\u{2026}" : "Thinking\u{2026}") : parts.text)
+                    .font(.body).foregroundStyle(parts.text.isEmpty ? Theme.secondary : Theme.text)
                     .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
-                if m.finished { ForEach(m.proposals) { proposalCard($0) } }
+                if m.finished { ForEach(parts.proposals) { proposalCard($0) } }
             }
         }
     }
@@ -228,7 +232,7 @@ struct AskView: View {
             Button(added ? "In your draft" : "Add to my draft") {
                 guard let ticker else { return }
                 var d = model.wealth.draft(ticker)
-                d.approve(p.kind, p.text, lens: lens, id: UUID().uuidString)
+                d.approve(p.kind, p.text, lens: session.lens, id: UUID().uuidString)
                 model.wealth.setDraft(d)
             }
             .buttonStyle(GhostButton(palette: .normal)).disabled(added)
@@ -241,47 +245,19 @@ struct AskView: View {
     private func start(_ item: Lens) {
         guard let ticker, let holding else { return }
         var d = model.wealth.draft(ticker)
-        if let previous = lens, previous != item.key, !d.lensesDone.contains(previous), messages.contains(where: { $0.role == .claude && $0.finished }) {
+        if let previous = session.lens, previous != item.key, !d.lensesDone.contains(previous),
+           session.messages.contains(where: { $0.role == .claude && $0.finished && !$0.text.isEmpty }) {
             d.lensesDone.append(previous)
         }
         model.wealth.setDraft(d)
-        lens = item.key
+        model.ask.setLens(key, item.key)
         ask("Let\u{2019}s look at \(holding.displayName) through the \(item.name) lens.")
     }
 
     private func ask(_ raw: String) {
-        let question = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !question.isEmpty, asking == nil else { return }
+        guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !answering else { return }
         input = ""
-        messages.append(Message(role: .reader, text: question))
-        turns.append(GoDeeper.Turn(fromReader: true, text: question))
-        messages.append(Message(role: .claude, text: ""))
-        let answerID = messages[messages.count - 1].id
-        let prompt = system, history = turns, chosen = model.settings.chatModel, search = isWealth
-
-        asking = Task { @MainActor in
-            defer { asking = nil }
-            @MainActor func update(_ change: (inout Message) -> Void) {
-                if let i = messages.firstIndex(where: { $0.id == answerID }) { change(&messages[i]) }
-            }
-            do {
-                let answer = try await ClaudeClient.ask(model: chosen, system: prompt, turns: history, webSearch: search) { soFar in
-                    update { $0.text = Proposals.split(soFar).text }
-                }
-                let parts = Proposals.split(answer.text)
-                update { $0.text = parts.text; $0.proposals = parts.proposals; $0.finished = true }
-                turns.append(GoDeeper.Turn(fromReader: false, text: answer.text))
-                if answer.truncated { messages.append(Message(role: .note, text: "That answer stopped part-way. Ask it to continue.")) }
-            } catch {
-                let partial = messages.first { $0.id == answerID }?.text ?? ""
-                if partial.isEmpty { messages.removeAll { $0.id == answerID }; turns.removeLast() }
-                else { update { $0.finished = true }; turns.append(GoDeeper.Turn(fromReader: false, text: partial)) }
-                let cancelled = error is CancellationError || (error as? URLError)?.code == .cancelled
-                if !cancelled {
-                    messages.append(Message(role: .note, text: (error as? LocalizedError)?.errorDescription ?? "Something interrupted the answer. Ask again."))
-                }
-            }
-        }
+        model.ask.send(key, raw, system: system, model: model.settings.chatModel, webSearch: isWealth)
     }
 }
 

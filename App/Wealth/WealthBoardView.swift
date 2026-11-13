@@ -40,7 +40,12 @@ struct WealthBoardView: View {
                             StatusDot(status: row.status)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(row.name).font(.body.weight(.semibold)).foregroundStyle(Theme.text)
-                                Text(row.next).font(.footnote).foregroundStyle(Theme.secondary)
+                                // An Ask answer for this holding that is arriving or waiting to be read comes first.
+                                switch model.ask.state(AskStore.key(Wealth.sectionKey, row.ticker)) {
+                                case .answering: Text("Ask is answering\u{2026}").font(.footnote).foregroundStyle(Theme.accent)
+                                case .ready: Text("Answer ready in Ask").font(.footnote.weight(.semibold)).foregroundStyle(Theme.accent)
+                                case .idle: Text(row.next).font(.footnote).foregroundStyle(Theme.secondary)
+                                }
                             }
                             Spacer(minLength: 8)
                             VStack(alignment: .trailing, spacing: 5) {
@@ -70,7 +75,9 @@ struct WealthBoardView: View {
                 }
                 if !rows.isEmpty {
                     NavigationLink(value: Route.ask(Wealth.sectionKey, nil)) {
-                        Label("Ask Wealth", systemImage: "bubble.left").frame(maxWidth: .infinity)
+                        Label(model.ask.state(AskStore.key(Wealth.sectionKey, nil)) == .ready ? "Ask Wealth · answer ready"
+                              : (model.ask.state(AskStore.key(Wealth.sectionKey, nil)) == .answering ? "Ask Wealth · answering\u{2026}" : "Ask Wealth"),
+                              systemImage: "bubble.left").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(GhostButton(palette: .normal)).padding(.top, 18)
                 }
