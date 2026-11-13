@@ -1,0 +1,69 @@
+# Generates SurfAt60.xcodeproj. Run `xcodegen` in this folder after changing this file.
+# Before the first build, set the three values marked CHANGE.
+name: SurfAt60
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""                 # CHANGE: your Apple developer Team ID
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+packages:
+  SurfCore:
+    path: Packages/SurfCore
+targets:
+  SurfAt60:
+    type: application
+    platform: iOS
+    sources: [App, Shared]
+    dependencies:
+      - package: SurfCore
+      - target: SurfAt60Widget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.surfat60          # CHANGE
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Surf at 60
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIAppFonts: [InstrumentSerif-Regular.ttf, InstrumentSerif-Italic.ttf]
+        UIBackgroundModes: [fetch, processing]
+        BGTaskSchedulerPermittedIdentifiers: [surfat60.refresh]
+        NSHealthShareUsageDescription: Surf at 60 reads your workouts, Exercise minutes, VO2 max, weight and sleep to keep your dashboard current.
+        NSHealthUpdateUsageDescription: Surf at 60 saves a workout to Health when you log a lift, row or yoga session by hand.
+        CFBundleURLTypes:
+          - CFBundleURLName: surfat60
+            CFBundleURLSchemes: [surfat60]
+    entitlements:
+      path: App/SurfAt60.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.developer.healthkit.background-delivery: true
+        com.apple.security.application-groups: [group.surfat60.shared]   # CHANGE with Shared/AppGroup.swift
+  SurfAt60Widget:
+    type: app-extension
+    platform: iOS
+    sources: [Widget, Shared]
+    dependencies:
+      - package: SurfCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.surfat60.widget   # CHANGE (app id + .widget)
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Surf at 60
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/SurfAt60Widget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.surfat60.shared]
