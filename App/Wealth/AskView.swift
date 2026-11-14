@@ -16,6 +16,29 @@ struct HoldingView: View {
                 Text(holding?.displayName ?? ticker).font(Theme.serif(38, relativeTo: .largeTitle)).foregroundStyle(Theme.text)
                     .accessibilityAddTraits(.isHeader).padding(.top, 6)
 
+                // What is due or coming for this holding, and the ceremonies that go with it.
+                let report = WealthRituals.next(model.wealth.earnings, ticker, today: model.today)
+                if let report {
+                    Text("Reports \(DayMath.weekdayName(report.date)), \(shortDay(report.date))\(report.when.map { " \($0)" } ?? "")")
+                        .font(.footnote).foregroundStyle(Theme.text).padding(.top, 10)
+                }
+                if let check = model.wealth.record.latestCheck(ticker) {
+                    Text("Last check \(shortDay(check.date)): \(check.outcome.line)").font(.footnote).foregroundStyle(Theme.secondary).padding(.top, 6)
+                }
+                if let values = model.wealth.record.latestValues(ticker) {
+                    Text("Leadership check \(shortDay(values.date)): \(values.line)").font(.footnote).foregroundStyle(Theme.secondary).padding(.top, 6)
+                }
+                HStack(spacing: 8) {
+                    if WealthRituals.watchOpen(model.wealth.earnings, ticker: ticker, today: model.today) != nil {
+                        NavigationLink(value: Route.watch(ticker)) { Text("What to watch") }.buttonStyle(GhostButton(palette: .normal))
+                    }
+                    if reasons != nil {
+                        NavigationLink(value: Route.stillTrue(ticker)) { Text("Still true?") }.buttonStyle(GhostButton(palette: .normal))
+                    }
+                    NavigationLink(value: Route.values(ticker)) { Text("Leadership") }.buttonStyle(GhostButton(palette: .normal))
+                }
+                .padding(.top, 12)
+
                 if let reasons {
                     Text(reasons.belief).font(Theme.serif(22, relativeTo: .title3)).foregroundStyle(Theme.text).padding(.top, 16)
                     list("Reasons", reasons.reasons)

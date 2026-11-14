@@ -82,7 +82,9 @@ struct WealthBoardView: View {
                     .buttonStyle(GhostButton(palette: .normal)).padding(.top, 18)
                 }
                 if let note = Wealth.concentration(rows, limit: 0.4) {
-                    Text(note + " Worth knowing; not a prompt to act.").font(.footnote).foregroundStyle(Theme.secondary).padding(.top, 14)
+                    // 40% is the limit Joe set for one holding (Nov 13, 2026).
+                    Text(note + " Your limit for one holding is 40%. Worth knowing; not a prompt to act.")
+                        .font(.footnote).foregroundStyle(Theme.secondary).padding(.top, 14)
                 }
                 if let day = model.wealth.book.latestDay {
                     Text("Closing prices through \(shortDay(day)). Holdings from \(model.wealth.importedOn.map(shortDay) ?? "your import").")

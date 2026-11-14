@@ -158,6 +158,45 @@ extension AppModel {
                                   : (next.next == "Write why you own it" ? "\(unwritten) of \(rows.count) still to write" : next.next)),
                               route: .ask(Wealth.sectionKey, next.ticker)))
         }
+        // Around each holding's earnings: what to watch before, "Still true?" after.
+        let main = config.dashboardSection?.key ?? SectionDefinition.healthKey
+        for holding in wealth.holdings {
+            let name = holding.displayName, ticker = holding.ticker
+            if let report = WealthRituals.watchDue(wealth.earnings, wealth.record, ticker: ticker, today: today) {
+                out.append(Ritual(id: "watch-\(ticker)", when: .dueNow, section: Wealth.sectionKey, kicker: "Wealth · before earnings",
+                                  title: "What to watch: \(name)", detail: "Reports \(report.date == today ? "today" : "tomorrow")\(report.when.map { " \($0)" } ?? "")",
+                                  route: .watch(ticker)))
+            } else if let report = WealthRituals.next(wealth.earnings, ticker, today: today) {
+                out.append(Ritual(id: "earnings-\(ticker)", when: .comingUp, section: Wealth.sectionKey, kicker: "Wealth",
+                                  title: "Earnings: \(name)", detail: "", date: report.date))
+            }
+            if wealth.reasons[ticker] != nil, let report = WealthRituals.checkDue(wealth.earnings, wealth.record, ticker: ticker, today: today) {
+                out.append(Ritual(id: "check-\(ticker)", when: .dueNow, section: Wealth.sectionKey, kicker: "Wealth · after earnings",
+                                  title: "Still true? \(name)", detail: "Reported \(ritualDay(report.date)) · check each reason and deal-breaker",
+                                  route: .stillTrue(ticker)))
+            }
+            // A values card in a recent issue (a new chief executive, say) calls for the leadership check.
+            let issues = report.edition(Wealth.sectionKey == main ? "" : Wealth.sectionKey).issues
+            if let cutoff = DayMath.adding(-21, to: today),
+               let prompt = issues.values.filter({ $0.date >= cutoff }).sorted(by: { $0.date > $1.date })
+                .first(where: { $0.cards.contains { $0.kind == "values" && $0.holding == ticker } }),
+               (wealth.record.latestValues(ticker)?.date ?? "") < prompt.date {
+                out.append(Ritual(id: "values-\(ticker)", when: .dueNow, section: Wealth.sectionKey, kicker: "Wealth · after a change at the top",
+                                  title: "Leadership check: \(name)", detail: "Three questions from your framework", route: .values(ticker)))
+            }
+            if let check = wealth.record.latestCheck(ticker) {
+                out.append(Ritual(id: "done-check-\(ticker)", when: .done, section: Wealth.sectionKey, kicker: "Wealth",
+                                  title: "Still true? \(name) · \(check.outcome.status.pill.lowercased())", detail: "", date: check.date))
+            }
+            if let note = wealth.record.watch.last(where: { $0.ticker == ticker }) {
+                out.append(Ritual(id: "done-watch-\(ticker)", when: .done, section: Wealth.sectionKey, kicker: "Wealth",
+                                  title: "What to watch: \(name)", detail: "", date: note.written))
+            }
+            if let values = wealth.record.latestValues(ticker) {
+                out.append(Ritual(id: "done-values-\(ticker)", when: .done, section: Wealth.sectionKey, kicker: "Wealth",
+                                  title: "Leadership check: \(name)", detail: "", date: values.date))
+            }
+        }
         for r in wealth.reasons.values where r.source == "app" {
             out.append(Ritual(id: "done-reasons-\(r.ticker)", when: .done, section: Wealth.sectionKey, kicker: "Wealth",
                               title: "Wrote why you own \(r.name)", detail: "", date: r.written))

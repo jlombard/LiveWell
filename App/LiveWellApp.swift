@@ -78,6 +78,9 @@ extension RootView {
                         case .library: LibraryView()
                         case .holding(let ticker): HoldingView(ticker: ticker)
                         case .ask(let section, let ticker): AskView(section: section, ticker: ticker)
+                        case .watch(let ticker): WatchView(ticker: ticker)
+                        case .stillTrue(let ticker): StillTrueView(ticker: ticker)
+                        case .values(let ticker): ValuesCheckView(ticker: ticker)
                         }
                     }
                     .navigationBarTitleDisplayMode(.inline)

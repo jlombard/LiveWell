@@ -917,4 +917,52 @@ final class LiveWellCoreTests: XCTestCase {
         XCTAssertEqual([stats.played, stats.solved, stats.streak, stats.bestStreak], [4, 3, 2, 2])
         XCTAssertEqual(stats.line, "Solved 3 of 4 · streak 2")
     }
+
+    // MARK: Wealth rituals
+
+    func testWhatToWatchIsDueTheDayBeforeAndStillTrueAfter() {
+        let dates = [EarningsDate(ticker: "NVDA", date: "2026-11-17", hour: "amc"), EarningsDate(ticker: "NVDA", date: "2026-08-26")]
+        var record = WealthRecord()
+        XCTAssertNil(WealthRituals.watchDue(dates, record, ticker: "NVDA", today: "2026-11-13"))       // Friday: not yet
+        XCTAssertEqual(WealthRituals.watchOpen(dates, ticker: "NVDA", today: "2026-11-13")?.date, "2026-11-17")   // but it can be written early
+        XCTAssertNil(WealthRituals.watchOpen(dates, ticker: "NVDA", today: "2026-10-30"))
+        XCTAssertEqual(WealthRituals.watchDue(dates, record, ticker: "NVDA", today: "2026-11-16")?.date, "2026-11-17")
+        XCTAssertEqual(WealthRituals.watchDue(dates, record, ticker: "NVDA", today: "2026-11-17")?.when, "after the close")
+        record.watch.append(WatchNote(ticker: "NVDA", earnings: "2026-11-17", watching: [], doubt: "x", written: "2026-11-16"))
+        XCTAssertNil(WealthRituals.watchDue(dates, record, ticker: "NVDA", today: "2026-11-17"))        // written: done
+        // The check opens the day after the report and stays open three weeks.
+        XCTAssertNil(WealthRituals.checkDue(dates, record, ticker: "NVDA", today: "2026-11-17"))
+        XCTAssertEqual(WealthRituals.checkDue(dates, record, ticker: "NVDA", today: "2026-11-18")?.date, "2026-11-17")
+        XCTAssertNil(WealthRituals.checkDue(dates, record, ticker: "NVDA", today: "2026-12-09"))
+        record.checks.append(StillTrueCheck(ticker: "NVDA", date: "2026-11-19", earnings: "2026-11-17", reasons: [], dealBreakers: [], note: ""))
+        XCTAssertNil(WealthRituals.checkDue(dates, record, ticker: "NVDA", today: "2026-11-20"))
+        let merged = WealthRituals.merge([EarningsDate(ticker: "NVDA", date: "2026-11-17")], dates)
+        XCTAssertEqual(merged.count, 2)
+        XCTAssertEqual(merged.last?.hour, "amc")                                                        // the hour survives the merge
+    }
+
+    func testStillTrueOutcomes() {
+        typealias R = StillTrueCheck.Reason
+        typealias B = StillTrueCheck.Breaker
+        func check(_ r: [StillTrueCheck.ReasonState], _ b: [StillTrueCheck.BreakerState]) -> StillTrueCheck {
+            StillTrueCheck(ticker: "ASML", date: "2026-11-19", earnings: nil, reasons: r.enumerated().map { R(text: "reason \($0.offset + 1)", state: $0.element) },
+                           dealBreakers: b.enumerated().map { B(text: "breaker \($0.offset + 1)", state: $0.element) }, note: "")
+        }
+        let good = check([.yes, .yes, .yes, .yes], [.clear, .clear]).outcome
+        XCTAssertEqual(good.status, .stillTrue)
+        XCTAssertEqual(good.line, "All 4 reasons still true. No deal-breaker hit.")
+        XCTAssertEqual(good.next, "Still true as of Nov 19")
+        let unsure = check([.yes, .unsure, .yes, .yes], [.clear, .clear]).outcome
+        XCTAssertEqual(unsure.status, .check("reason 2"))
+        XCTAssertEqual(unsure.line, "3 of 4 reasons still true. One to check: reason 2")
+        let tested = check([.yes, .yes], [.clear, .tested]).outcome
+        XCTAssertEqual(tested.status.pill, "Next: check")
+        XCTAssertTrue(tested.line.contains("tested, not hit: breaker 2"))
+        XCTAssertEqual(check([.yes, .yes], [.hit, .clear]).outcome.status, .dealBreaker)
+        XCTAssertEqual(check([.no, .yes], [.clear]).outcome.status, .dealBreaker)                      // a reason gone counts the same
+        let values = ValuesCheck(ticker: "AAPL", date: "2026-11-13", trigger: "New chief executive", customer: .yes, world: .yes, leadership: .unsure, note: "")
+        XCTAssertEqual(values.line, "Leadership trust: not sure yet.")
+        var record = WealthRecord(); record.values = [values]
+        XCTAssertTrue(AppFiles.json(record).contains("\"leadership\" : \"unsure\""))
+    }
 }

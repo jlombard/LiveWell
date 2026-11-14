@@ -23,6 +23,7 @@
 		7116638DFEC93020F276717C /* AskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B00DFC35AC835D24201238 /* AskStore.swift */; };
 		78F0CF9E35A5941104658E41 /* RichTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C3C99F6A4AE67B118A37D37 /* RichTextView.swift */; };
 		93973B4D6E92A884624ACF94 /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A12BBCBA24966D748D1262D9 /* InstrumentSerif-Regular.ttf */; };
+		95AD12E2DF61F060D0A50C51 /* WealthRitualViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70435F52DA89CEC34034B75E /* WealthRitualViews.swift */; };
 		9B1C645056A4A0450EDBD119 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E38BF4FBFE4C8D503DFAF489 /* SettingsView.swift */; };
 		A2A238A33411711970E20422 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F9F82D4913BDE6E47AD052 /* AppGroup.swift */; };
 		B3A0570F2BA4AE7BAC7F544F /* PlanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9342953812CACD4245AEB2 /* PlanReviewView.swift */; };
@@ -88,6 +89,7 @@
 		4E18292B2823A0345EC79521 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4EE5D287ADE1965B952E7017 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
 		4F85D8EE5A6BA63FE3F2BC03 /* LiveWellWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWellWidget.swift; sourceTree = "<group>"; };
+		70435F52DA89CEC34034B75E /* WealthRitualViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WealthRitualViews.swift; sourceTree = "<group>"; };
 		883EDB1E3A5AD345415D4CEF /* AskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskView.swift; sourceTree = "<group>"; };
 		91E671BAF513EAEC28148304 /* SectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionsView.swift; sourceTree = "<group>"; };
 		96B9B0C1B6F058A8DB5D21DB /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
@@ -224,6 +226,7 @@
 				B2B00DFC35AC835D24201238 /* AskStore.swift */,
 				883EDB1E3A5AD345415D4CEF /* AskView.swift */,
 				A8DAD7949903F3FDCFD121F2 /* WealthBoardView.swift */,
+				70435F52DA89CEC34034B75E /* WealthRitualViews.swift */,
 				D39CDAD1943EA99159B78AA6 /* WealthStore.swift */,
 			);
 			path = Wealth;
@@ -436,6 +439,7 @@
 				C669143D2072B756AA7B4FBF /* Theme.swift in Sources */,
 				EF98BDC01981A1F0E51B221E /* TodayView.swift in Sources */,
 				607042AD9DEC48EAEE766189 /* WealthBoardView.swift in Sources */,
+				95AD12E2DF61F060D0A50C51 /* WealthRitualViews.swift in Sources */,
 				5579FD04E481576AD158B7F4 /* WealthStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

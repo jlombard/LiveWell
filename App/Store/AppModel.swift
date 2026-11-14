@@ -21,6 +21,10 @@ enum Route: Hashable {
     case holding(String)
     /// Ask, scoped to a section and optionally to one holding.
     case ask(String, String?)
+    /// Wealth's ceremonies for one holding.
+    case watch(String)
+    case stillTrue(String)
+    case values(String)
 }
 
 struct FileStatus: Codable, Equatable {
@@ -167,6 +171,9 @@ final class AppModel {
         case "wealth": paths[.today] = [.section(Wealth.sectionKey)]
         case "wealthissue": paths[.today] = [.issue(Wealth.sectionKey)]
         case "holding": paths[.today] = [.section(Wealth.sectionKey), .holding(UserDefaults.standard.string(forKey: "demoTicker") ?? "ASML")]
+        case "watch": paths[.today] = [.watch(UserDefaults.standard.string(forKey: "demoTicker") ?? "NVDA")]
+        case "stilltrue": paths[.today] = [.stillTrue(UserDefaults.standard.string(forKey: "demoTicker") ?? "ASML")]
+        case "values": paths[.today] = [.values(UserDefaults.standard.string(forKey: "demoTicker") ?? "AAPL")]
         case "ask": paths[.today] = [.section(Wealth.sectionKey), .ask(Wealth.sectionKey, UserDefaults.standard.string(forKey: "demoTicker"))]
         case "sections": tab = .sections
         case "rituals": tab = .rituals
@@ -267,6 +274,8 @@ final class AppModel {
         recompute()
         await report.reload()
         await wealth.refresh()
+        loadFramework()
+        await wealth.refreshEarnings(today: today)
     }
 
     func workoutRows() -> [WorkoutRow] {
@@ -510,6 +519,9 @@ final class AppModel {
         let health = config.dashboardSection?.key ?? SectionDefinition.healthKey
         switch url.host {
         case "wealth": tab = .today; paths[.today] = wealth.holdings.isEmpty ? [] : [.section(Wealth.sectionKey)]
+        case "watch":
+            let ticker = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "ticker" }?.value
+            tab = .rituals; paths[.rituals] = ticker.flatMap { wealth.holding($0) }.map { [.watch($0.ticker)] } ?? []
         case "checkin": tab = .rituals; paths[.rituals] = [.checkin]
         case "report": tab = .today; paths[.today] = [.issue(health)]
         case "front": tab = .today; paths[.today] = []

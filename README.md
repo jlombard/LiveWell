@@ -13,7 +13,7 @@ add the cutover tools, sections, home-screen widgets, the biweekly plan review, 
 and a new-issue alert.
 
 **Status.** Phases 1 and 2 run on the phone. The follow-ups build with no warnings and the core
-library passes its 56 tests. Checked in the simulator against a copy of the real folder: the
+library passes its 58 tests. Checked in the simulator against a copy of the real folder: the
 plan review screen, the section filter, the icon render and the widget layouts (rendered
 off-device). Not yet seen on a device: the new widgets on a home screen and in StandBy, the
 tinted and dark icon, accepting a plan change, and the new-issue alert. See "Trying the
@@ -107,6 +107,16 @@ After cutover it stops writing `health/plan_days.csv` and the app owns it.
 3. Vote on a card and check `app/feedback.json`.
 4. Add an API key in Settings, tap Go deeper on a card, ask a starter question, and keep the
    answer (`app/saved.json`).
+
+## Decisions (Nov 13, 2026)
+
+- **The Surf Report web page is retired.** The app is the only reader. The morning guide no
+  longer publishes the page or reads its database; the page itself was left in place.
+- **One holding should be no more than 40% of the account.** The board's concentration note and
+  the Build Wealth guide use that limit.
+- **The whole Rollover IRA is the framework's high-conviction slice.**
+- **`investment-framework.md` in the Health Glance folder is the master copy,** provisionally,
+  until it has been used for a while without a problem.
 
 ## The shell: Today, Sections, Rituals (Nov 13, 2026)
 
@@ -202,7 +212,24 @@ and the sources, and offers a share grid in black and white squares. Results, st
 stay on the phone. While the newest edition's puzzle is unplayed, the front page shows it as an
 extra. Go deeper never sees the answer. The guide tells the morning run how to write one.
 
-Still to come: the "Still true?" and earnings rituals, the watchlist, and move alerts.
+## Wealth: rituals around earnings and leadership
+
+- **What to watch** is due the day before a holding reports and on the day: pick which of your
+  things to watch this report can speak to, and write what would make you doubt the company, as
+  opposed to just disappoint you. It can be written up to two weeks early from the holding's
+  page. A notification arrives at 9 AM the day before.
+- **"Still true?" check** is due from the day after a report for three weeks: each reason
+  marked still true, not sure or no longer true, each deal-breaker not hit, tested or hit, with
+  your pre-report note beside it and a button to check the report in Ask. The result sets the
+  board's pill: Still true, Next: check, or Deal-breaker hit.
+- **Leadership check** asks the framework's three values questions. It becomes due when a
+  Build Wealth issue carries a values card about a holding, and can be run any time from the
+  holding's page.
+- **Earnings dates** come from Finnhub's earnings calendar, once a day, merged with
+  `newsletter/wealth/calendar.json`, which the morning run keeps from company announcements.
+- **For the morning run:** `app/checks.json` holds the notes and checks.
+
+Still to come: the watchlist, move alerts, and adding a section in the app.
 
 ## Follow-ups (Nov 13, 2026)
 
